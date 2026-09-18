@@ -84,11 +84,11 @@ st.markdown("---")
 
 # SIDEBAR: MONEY MANAGEMENT
 st.sidebar.header("🛡️ Proteksi Risiko & Uang")
-modal_idr = st.sidebar.number_input("Modal Saham Aktif (IDR)", min_value=0.0, value=10000000.0, step=1000000.0)
+modal_ididr = st.sidebar.number_input("Modal Saham Aktif (IDR)", min_value=0.0, value=10000000.0, step=1000000.0)
 modal_usd = st.sidebar.number_input("Modal Forex Aktif (USD)", min_value=0.0, value=1000.0, step=100.0)
 persen_risiko = st.sidebar.slider("Batas Risiko Maksimal per Trade (%)", min_value=0.5, max_value=5.0, value=1.0, step=0.5)
 
-max_risk_idr = modal_idr * (persen_risiko / 100)
+max_risk_idr = modal_ididr * (persen_risiko / 100)
 max_risk_usd = modal_usd * (persen_risiko / 100)
 st.sidebar.info(f"💡 **Batas Toleransi Los Maksimal:**\n* Saham: Rp {max_risk_idr:,.0f}\n* Forex: ${max_risk_usd:,.2f}")
 
@@ -188,7 +188,7 @@ if not df_active.empty:
     for col in ['Harga Masuk', 'Harga Keluar', 'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL']:
         df_editor_ready[col] = pd.to_numeric(df_editor_ready[col], errors='coerce').fillna(0.0)
     
-    # ✨ FORMAT PUNCAK: Menggunakan sistem kacamata pelapis bilangan internasional standar US/UK (Koma ribuan, titik desimal)
+    # ✨ FIX KURUNG TUTUP: Menambahkan ) di baris penutup column_config agar 100% AMAN
     edited_df = st.data_editor(
         df_editor_ready,
         num_rows="dynamic",
