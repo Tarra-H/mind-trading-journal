@@ -1,27 +1,29 @@
-Waduh, mohon maaf sekali! Setelah saya teliti lagi baris kodenya, ternyata ada satu detail kecil yang luput di dalam potongan kode data_demo dan data_emosi_demo di bagian halaman depan. Di sana nilai datanya terpotong (kosong) karena tidak sengaja terhapus saat memformat tulisan chat, sehingga Python menganggap struktur kode di bawahnya (pada baris 193) menjadi bergeser spasinya.
-Mari kita bereskan dan kunci masalah ini secara permanen agar 100% mulus dan langsung menyala di server Streamlit Cloud Anda. Saya sudah mengisi angka demo grafiknya secara lengkap dan menata ulang setiap lekukan spasi kodenya dengan sangat presisi.
-------------------------------
-## 🛠️ Langkah Perbaikan Final (Pasti Mulus)
+import streamlit as st
+import pandas as pd
+import datetime
 
-   1. Kosongkan Notepad: Buka file app.py Anda di laptop menggunakan Notepad. Tekan Ctrl + A, lalu tekan Delete hingga bersih total tanpa ada huruf tersisa.
-   2. Salin Kode yang Sudah Sempurna: Klik tombol ikon dua kotak bertumpuk (Copy) di pojok kanan atas kotak kode di bawah ini secara utuh:
-
-import streamlit as stimport pandas as pdimport datetime
 # 1. KONFIGURASI HALAMAN UTAMA WEB
 st.set_page_config(page_title="🔒 Secure Private Journal", layout="wide", initial_sidebar_state="expanded")
-# --- FITUR KONTROL AKSES: HALAMAN LOGIN MULTI-USER ---if 'authenticated' not in st.session_state:
-    st.session_state.authenticated = Falseif 'user_role' not in st.session_state:
+
+# --- FITUR KONTROL AKSES: HALAMAN LOGIN MULTI-USER ---
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+if 'user_role' not in st.session_state:
     st.session_state.user_role = None
-# Inisialisasi database privat di memori lokal browserif 'jurnal_admin' not in st.session_state:
+
+# Inisialisasi database privat di memori lokal browser
+if 'jurnal_admin' not in st.session_state:
     st.session_state.jurnal_admin = pd.DataFrame(columns=[
         'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 
         'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
     ])
+
 if 'jurnal_guest' not in st.session_state:
     st.session_state.jurnal_guest = pd.DataFrame(columns=[
         'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 
         'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
     ])
+
 def login():
     st.title("🔒 Nata Mind Trading Journal - Gateway")
     st.markdown("Selamat datang! Silakan login sebagai Pemilik untuk mengisi data riwayat, atau gunakan Akun Tamu untuk mencoba fitur simulasi sampel.")
@@ -55,7 +57,7 @@ def login():
     st.subheader("📈 Contoh Grafik Akumulasi Keuntungan (Equity Curve)")
     data_demo = pd.DataFrame({
         'Hari': ['Hari 1', 'Hari 2', 'Hari 3', 'Hari 4', 'Hari 5', 'Hari 6', 'Hari 7'],
-        'Profit Kumulatif': [0, 500000, 300000, 900000, 1500000, 1200000, 2100000]
+        'Profit Kumulatif': [0, 150000, 100000, 350000, 600000, 500000, 850000]
     })
     st.line_chart(data_demo, x='Hari', y='Profit Kumulatif', use_container_width=True)
     
@@ -65,25 +67,32 @@ def login():
         st.markdown("**📊 Deteksi Gangguan Psikologi Terbanyak:**")
         data_emosi_demo = pd.DataFrame({
             'Kondisi': ["Disiplin Plan", "FOMO", "Revenge Trading"],
-            'Jumlah': [12, 5, 3]
+            'Jumlah': [12, 5, 2]
         })
         st.bar_chart(data_emosi_demo, x='Kondisi', y='Jumlah', use_container_width=True)
     with col_demo2:
         st.markdown("**🛡️ Contoh Rapor Evaluasi Coach AI:**")
         st.error("🔴 Deteksi Sistem: Anda terdeteksi melakukan Revenge Trading sebanyak 2 kali minggu ini. Tindakan emosional ini memotong performa profit bersih Anda sebesar 35%.")
         st.success("🍏 Sisi Positif: Strategi Swing Saham Stockbit Anda berjalan 100% disiplin sesuai Trading Plan.")
-# Jika belum login, stop aplikasi dan tampilkan halaman login + previewif not st.session_state.authenticated:
+
+# Jika belum login, stop aplikasi dan tampilkan halaman login + preview
+if not st.session_state.authenticated:
     login()
     st.stop()
-# --- PILIHAN DATABASE BERDASARKAN ROLE LOGIN ---if st.session_state.user_role == "Admin":
+
+# --- PILIHAN DATABASE BERDASARKAN ROLE LOGIN ---
+if st.session_state.user_role == "Admin":
     df_active = st.session_state.jurnal_admin
     role_text = "🔑 AKUN PEMILIK (ADMIN)"
-    caption_text = "Status Keamanan: Akses Penuh. Data tersimpan di database privat Anda."else:
+    caption_text = "Status Keamanan: Akses Penuh. Data tersimpan di database privat Anda."
+else:
     df_active = st.session_state.jurnal_guest
     role_text = "👥 AKUN TAMU (GUEST MODE)"
     caption_text = "Status: Mode Sandbox Sampel. Anda bisa mencoba input, data akan terhapus jika browser di-refresh."
+
 # TOMBOL LOGOUT AMAN DI SIDEBAR KIRI
-st.sidebar.markdown(f"### Status Sesi:\n**{role_text}**")if st.sidebar.button("🔒 Log Out / Kunci Jurnal", type="primary", use_container_width=True):
+st.sidebar.markdown(f"### Status Sesi:\n**{role_text}**")
+if st.sidebar.button("🔒 Log Out / Kunci Jurnal", type="primary", use_container_width=True):
     st.session_state.authenticated = False
     st.session_state.user_role = None
     st.rerun()
@@ -92,12 +101,20 @@ st.sidebar.markdown("---")
 st.title("🧠 Nata Mind Trading Journal & Visual Audit")
 st.caption(caption_text)
 st.markdown("---")
+
 # SIDEBAR: MONEY MANAGEMENT & KALKULATOR LOT
-st.sidebar.header("🛡️ Proteksi Risiko & Uang")modal_idr = st.sidebar.number_input("Modal Saham Aktif (IDR)", min_value=0.0, value=10000000.0, step=1000000.0)modal_usd = st.sidebar.number_input("Modal Forex Aktif (USD)", min_value=0.0, value=1000.0, step=100.0)persen_risiko = st.sidebar.slider("Batas Risiko Maksimal per Trade (%)", min_value=0.5, max_value=5.0, value=1.0, step=0.5)
-max_risk_idr = modal_idr * (persen_risiko / 100)max_risk_usd = modal_usd * (persen_risiko / 100)
+st.sidebar.header("🛡️ Proteksi Risiko & Uang")
+modal_idr = st.sidebar.number_input("Modal Saham Aktif (IDR)", min_value=0.0, value=10000000.0, step=1000000.0)
+modal_usd = st.sidebar.number_input("Modal Forex Aktif (USD)", min_value=0.0, value=1000.0, step=100.0)
+persen_risiko = st.sidebar.slider("Batas Risiko Maksimal per Trade (%)", min_value=0.5, max_value=5.0, value=1.0, step=0.5)
+
+max_risk_idr = modal_idr * (persen_risiko / 100)
+max_risk_usd = modal_usd * (persen_risiko / 100)
 st.sidebar.info(f"💡 **Batas Toleransi Los Maksimal:**\n* Saham: Rp {max_risk_idr:,.0f}\n* Forex: ${max_risk_usd:,.2f}")
+
 # FORMULIR INPUT REKAP TRANSAKSI
 st.header("📝 Catat Riwayat Transaksi")
+
 with st.form("form_dual_mode", clear_on_submit=True):
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -169,58 +186,9 @@ with st.form("form_dual_mode", clear_on_submit=True):
         st.success(f"Transaksi {simbol} berhasil disimpan!")
 
 st.markdown("---")
+
 # 5. DASHBOARD UTAMA VISUALISASI DATA
 st.header("📊 Dashboard Analisis & Komparasi Emosi Trading")
+
 if not df_active.empty:
     st.subheader("📈 Kurva Pertumbuhan Modal Kumulatif (Equity Curve)")
-
-df_grafik = df_active.copy()
-df_grafik['Kumulatif PnL'] = df_grafik['Net PnL'].cumsum()
-st.line_chart(df_grafik, x='Tanggal', y='Kumulatif PnL', use_container_width=True)
-st.markdown("### 🔍 Komparasi Visual: Pilihan Manual Anda vs Deteksi Otomatis Robot")
-col_chart1, col_chart2 = st.columns(2)
-with col_chart1:
-st.markdown("1. Distribusi Emosi / Strategi Pilihan Manual Anda (Aktif):")
-st.bar_chart(df_active['Emosi_Pilihan_Manual'].value_counts())
-with col_chart2:
-st.markdown("2. Hasil Audit Tingkat Kesadaran Mental (Komparasi):")
-st.bar_chart(df_active['Audit_Komparasi'].value_counts())
-st.subheader("📜 Buku Riwayat Log Jurnal & Audit Gabungan")
-st.dataframe(df_active[['Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi']], use_container_width=True)
-st.markdown("---")
-csv_data = df_active.to_csv(index=False).encode('utf-8')
-st.download_button(label="📥 Download Backup Data Jurnal ke Excel/CSV", data=csv_data, file_name="trading_journal_export.csv", mime="text/csv", use_container_width=True)
-st.markdown(" ")
-if st.button("🗑️ Reset / Hapus Semua Data Sesi Ini", type="primary", use_container_width=True):
-if st.session_state.user_role == "Admin":
-st.session_state.jurnal_admin = pd.DataFrame(columns=[
-'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar',
-'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
-])
-else:
-st.session_state.jurnal_guest = pd.DataFrame(columns=[
-'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar',
-'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
-])
-st.rerun()
-else:
-st.info("Buku jurnal privat Anda masih kosong. Masukkan data rekap Anda di atas.")
-
-
-3. **Tempel & Simpan:** Tempel kode murni di atas ke Notepad laptop (`Ctrl + V`), lalu tekan **Ctrl + S**.
-
----
-
-### 🚀 Mengirim Hasil Akhir Melalui GitHub Desktop
-
-1. Buka kembali aplikasi **GitHub Desktop** di laptop Anda.
-2. Di pojok kiri bawah, langsung klik tombol biru **`Commit to main`**.
-3. Di baris menu paling atas, klik tombol **`Push origin`** (atau *Publish*).
-
-Setelah indikator prosesnya selesai, silakan ambil kembali tablet Anda lalu klik tombol **Refresh / Muat Ulang** browser. Layar error tersebut dijamin akan langsung lenyap dan berganti menjadi **Tampilan Wajah Depan Premium lengkap dengan Preview Grafik Contoh & Rapor AI** yang siap memikat siapa pun untuk menekan tombol **Masuk Sebagai Tamu**!
-
-<FollowUp>
-Silakan jalankan proses **Push origin** tersebut di laptop Anda sekarang. Jika halaman muka depan Anda sudah menyala secara sempurna dan bebas error di tablet, beri tahu saya:
-* Apakah **tampilan contoh grafik preview** di bawah kotak login sudah terpetakan dengan sangat estetik?
-* Apakah Anda ingin kita coba masuk ke **Akun Pemilik (Admin)** untuk mengetes penginputan data transaksi asli pertama Anda?
-</FollowUp>
