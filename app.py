@@ -57,7 +57,7 @@ def login():
     st.subheader("📈 Contoh Grafik Akumulasi Keuntungan (Equity Curve)")
     data_demo = pd.DataFrame({
         'Hari': ['Hari 1', 'Hari 2', 'Hari 3', 'Hari 4', 'Hari 5', 'Hari 6', 'Hari 7'],
-        'Profit Kumulatif': [0, 150000, 100000, 350000, 600000, 500000, 850000]
+        'Profit Kumulatif': [100000, 250000, 150000, 400000, 650000, 580000, 900000]
     })
     st.line_chart(data_demo, x='Hari', y='Profit Kumulatif', use_container_width=True)
     
@@ -67,13 +67,13 @@ def login():
         st.markdown("**📊 Deteksi Gangguan Psikologi Terbanyak:**")
         data_emosi_demo = pd.DataFrame({
             'Kondisi': ["Disiplin Plan", "FOMO", "Revenge Trading"],
-            'Jumlah': [12, 5, 2]
+            'Jumlah': [12, 4, 2]
         })
         st.bar_chart(data_emosi_demo, x='Kondisi', y='Jumlah', use_container_width=True)
     with col_demo2:
         st.markdown("**🛡️ Contoh Rapor Evaluasi Coach AI:**")
         st.error("🔴 Deteksi Sistem: Anda terdeteksi melakukan Revenge Trading sebanyak 2 kali minggu ini. Tindakan emosional ini memotong performa profit bersih Anda sebesar 35%.")
-        st.success("🍏 Sisi Positif: Strategi Swing Saham Stockbit Anda berjalan 100% disiplin sesuai Trading Plan.")
+        st.success("🍏 Sisi Positif: Strategi Swing Saham Anda berjalan 100% disiplin sesuai Trading Plan.")
 
 # Jika belum login, stop aplikasi dan tampilkan halaman login + preview
 if not st.session_state.authenticated:
@@ -120,9 +120,10 @@ with st.form("form_dual_mode", clear_on_submit=True):
     with col1:
         tanggal = st.date_input("Tanggal Transaksi", value=datetime.date.today())
         jam_entry = st.time_input("Jam Masuk Posisi (Isi seadanya jika malas/ribet)", value=datetime.time(0, 0))
-        broker = st.selectbox("Platform / Broker", ["Stockbit (Saham IDR)", "Gotrade (Saham USD)", "Exness MT5 (Forex USD)"])
+        # KODE BARU: Menjadi kolom teks ketik bebas untuk mendukung seluruh broker publik global
+        broker = st.text_input("Platform / Broker (Contoh: Stockbit IDR, Exness USD, Ajaib IDR)").strip()
     with col2:
-        simbol = st.text_input("Simbol / Kode Aset (Misal: BBRI / XAUUSD)").upper()
+        simbol = st.text_input("Simbol / Kode Aset (Misal: BBRI / AAPL / XAUUSD)").upper()
         tipe = st.selectbox("Arah Posisi", ["BUY", "SELL"])
         ukuran = st.number_input("Jumlah Ukuran (Lot / Lembar Saham)", min_value=0.0, format="%.2f")
     with col3:
@@ -139,7 +140,8 @@ with st.form("form_dual_mode", clear_on_submit=True):
 
     if submit and simbol and ukuran > 0:
         multiplier = 1 if tipe == "BUY" else -1
-        if "Exness" in broker:
+        # Logika matematika cerdas: membaca tipe perhitungan mata uang dari teks ketik bebas pengguna
+        if "USD" in broker.upper() or "FOREX" in broker.upper():
             pnl = (harga_keluar - harga_masuk) * ukuran * 100 * multiplier if "XAU" in simbol else (harga_keluar - harga_masuk) * ukuran * 100000 * multiplier
         else:
             pnl = (harga_keluar - harga_masuk) * ukuran * multiplier
@@ -170,7 +172,7 @@ with st.form("form_dual_mode", clear_on_submit=True):
             audit_komparasi = "🧠 Evaluasi Mandiri"
 
         new_row = {
-            'Tanggal': tanggal, 'Jam_Entry': jam_entry, 'Aset / Broker': broker, 'Simbol': simbol, 
+            'Tanggal': tanggal, 'Jam_Entry': jam_entry, 'Aset / Broker': broker if broker else "General Broker", 'Simbol': simbol, 
             'Tipe': tipe, 'Harga Masuk': harga_masuk, 'Harga Keluar': harga_keluar, 'Rencana_SL': r_sl, 
             'Rencana_TP': r_tp, 'Ukuran': ukuran, 'Net PnL': pnl, 'Emosi_Pilihan_Manual': emosi_manual, 
             'Deteksi_Otomatis_Sistem': deteksi_otomatis, 'Audit_Komparasi': audit_komparasi, 'Status': status
@@ -183,12 +185,3 @@ with st.form("form_dual_mode", clear_on_submit=True):
             st.session_state.jurnal_guest = pd.concat([st.session_state.jurnal_guest, pd.DataFrame([new_row])], ignore_index=True)
             df_active = st.session_state.jurnal_guest
             
-        st.success(f"Transaksi {simbol} berhasil disimpan!")
-
-st.markdown("---")
-
-# 5. DASHBOARD UTAMA VISUALISASI DATA
-st.header("📊 Dashboard Analisis & Komparasi Emosi Trading")
-
-if not df_active.empty:
-    st.subheader("📈 Kurva Pertumbuhan Modal Kumulatif (Equity Curve)")
