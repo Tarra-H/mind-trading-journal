@@ -5,49 +5,76 @@ import datetime
 # 1. KONFIGURASI HALAMAN UTAMA WEB
 st.set_page_config(page_title="🔒 Secure Private Journal", layout="wide", initial_sidebar_state="expanded")
 
-# --- FITUR KONTROL AKSES: HALAMAN LOGIN AMAN ---
+# --- FITUR KONTROL AKSES: HALAMAN LOGIN MULTI-USER ---
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
+if 'user_role' not in st.session_state:
+    st.session_state.user_role = None
+
+# Inisialisasi database database privat di memori lokal browser (Sesi Terpisah)
+if 'jurnal_admin' not in st.session_state:
+    st.session_state.jurnal_admin = pd.DataFrame(columns=[
+        'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 
+        'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
+    ])
+
+if 'jurnal_guest' not in st.session_state:
+    st.session_state.jurnal_guest = pd.DataFrame(columns=[
+        'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 
+        'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
+    ])
 
 def login():
-    st.title("🔒 Private Access Control")
-    st.markdown("Aplikasi ini dilindungi. Silakan masukkan kredensial untuk membuka jurnal.")
+    st.title("🔒 Mind Trading Journal - Gateway")
+    st.markdown("Selamat datang! Silakan login sebagai Pemilik untuk mengisi data riwayat, atau gunakan Akun Tamu untuk mencoba fitur simulasi sampel.")
     
-    # SILAKAN GANTI USERNAME DAN PASSWORD SESUAI KEINGINAN ANDA DI BAWAH INI
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
     
-    if st.button("Log In"):
-        if username == "trader123" and password == "rahasia2026":
+    col_l1, col_l2 = st.columns(2)
+    with col_l1:
+        if st.button("🚀 Log In Pemilik (Admin)", use_container_width=True):
+            # SILAKAN GANTI USERNAME DAN PASSWORD ANDA DI SINI
+            if username == "trader123" and password == "rahasia2026":
+                st.session_state.authenticated = True
+                st.session_state.user_role = "Admin"
+                st.success("Akses Pemilik Diterima! Memuat database utama...")
+                st.rerun()
+            else:
+                st.error("Username atau Password Admin salah!")
+                
+    with col_l2:
+        if st.button("👥 Masuk Sebagai Tamu (Coba Sampel)", use_container_width=True):
             st.session_state.authenticated = True
-            st.success("Akses diterima! Memuat data...")
+            st.session_state.user_role = "Guest"
+            st.toast("Anda masuk dalam mode Guest. Data bersifat simulasi sementara.")
             st.rerun()
-        else:
-            st.error("Username atau Password salah! Akses ditolak.")
 
 # Jika belum login, stop aplikasi dan tampilkan halaman login saja
 if not st.session_state.authenticated:
     login()
     st.stop()
 
-# --- [BATAS KODE LOGIN] JIKA BERHASIL LOGIN, SEMUA KODE DI BAWAH INI BARU TERBUKA ---
+# --- PILIHAN DATABASE BERDASARKAN ROLE LOGIN ---
+if st.session_state.user_role == "Admin":
+    df_active = st.session_state.jurnal_admin
+    role_text = "🔑 AKUN PEMILIK (ADMIN)"
+    caption_text = "Status Keamanan: Akses Penuh. Data tersimpan di database privat Anda."
+else:
+    df_active = st.session_state.jurnal_guest
+    role_text = "👥 AKUN TAMU (GUEST MODE)"
+    caption_text = "Status: Mode Sandbox Sampel. Anda bisa mencoba input, data akan terhapus jika browser di-refresh."
 
-# Inisialisasi database privat di memori lokal browser (Session State)
-if 'jurnal' not in st.session_state:
-    st.session_state.jurnal = pd.DataFrame(columns=[
-        'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 
-        'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
-    ])
-
-# TOMBOL LOGOUT AMAN DI SIDEBAR KIRI (BARU)
-st.sidebar.markdown("---")
-if st.sidebar.button("🔒 Log Out / Kunci Jurnal", type="primary"):
+# TOMBOL LOGOUT AMAN DI SIDEBAR KIRI
+st.sidebar.markdown(f"### Status Sesi:\n**{role_text}**")
+if st.sidebar.button("🔒 Log Out / Kunci Jurnal", type="primary", use_container_width=True):
     st.session_state.authenticated = False
+    st.session_state.user_role = None
     st.rerun()
 st.sidebar.markdown("---")
 
 st.title("🧠 Nata Mind Trading Journal & Visual Audit")
-st.caption("Sistem Jurnal Fleksibel: Menggunakan Input Manual Saat Ini, Siap untuk Deteksi Otomatis Masa Depan Tanpa Saling Mengganggu")
+st.caption(caption_text)
 st.markdown("---")
 
 # SIDEBAR: MONEY MANAGEMENT & KALKULATOR LOT
@@ -95,14 +122,13 @@ with st.form("form_dual_mode", clear_on_submit=True):
         status = "WIN" if pnl > 0 else "LOSS" if pnl < 0 else "BREAKEVEN"
         
         deteksi_otomatis = "Belum Terbaca (Butuh Data Presisi)"
-        df_hist = st.session_state.jurnal
         
         if jam_entry != datetime.time(0, 0):
-            if (status == "LOSS" or (not df_hist.empty and df_hist.iloc[-1]['Status'] == "LOSS")) and not df_hist.empty:
-                waktu_lalu = datetime.datetime.combine(df_hist.iloc[-1]['Tanggal'], df_hist.iloc[-1]['Jam_Entry'])
+            if (status == "LOSS" or (not df_active.empty and df_active.iloc[-1]['Status'] == "LOSS")) and not df_active.empty:
+                waktu_lalu = datetime.datetime.combine(df_active.iloc[-1]['Tanggal'], df_active.iloc[-1]['Jam_Entry'])
                 waktu_kini = datetime.datetime.combine(tanggal, jam_entry)
                 selisih_menit = abs((waktu_kini - waktu_lalu).total_seconds() / 60)
-                if selisih_menit <= 30 and df_hist.iloc[-1]['Aset / Broker'] == broker:
+                if selisih_menit <= 30 and df_active.iloc[-1]['Aset / Broker'] == broker:
                     deteksi_otomatis = "Revenge Trading"
             
             if r_sl == 0 and r_tp == 0:
@@ -125,18 +151,24 @@ with st.form("form_dual_mode", clear_on_submit=True):
             'Rencana_TP': r_tp, 'Ukuran': ukuran, 'Net PnL': pnl, 'Emosi_Pilihan_Manual': emosi_manual, 
             'Deteksi_Otomatis_Sistem': deteksi_otomatis, 'Audit_Komparasi': audit_komparasi, 'Status': status
         }
-        st.session_state.jurnal = pd.concat([st.session_state.jurnal, pd.DataFrame([new_row])], ignore_index=True)
+        
+        if st.session_state.user_role == "Admin":
+            st.session_state.jurnal_admin = pd.concat([st.session_state.jurnal_admin, pd.DataFrame([new_row])], ignore_index=True)
+            df_active = st.session_state.jurnal_admin
+        else:
+            st.session_state.jurnal_guest = pd.concat([st.session_state.jurnal_guest, pd.DataFrame([new_row])], ignore_index=True)
+            df_active = st.session_state.jurnal_guest
+            
         st.success(f"Transaksi {simbol} berhasil disimpan!")
 
 st.markdown("---")
 
 # 5. DASHBOARD UTAMA VISUALISASI DATA
 st.header("📊 Dashboard Analisis & Komparasi Emosi Trading")
-df = st.session_state.jurnal
 
-if not df.empty:
+if not df_active.empty:
     st.subheader("📈 Kurva Pertumbuhan Modal Kumulatif (Equity Curve)")
-    df_grafik = df.copy()
+    df_grafik = df_active.copy()
     df_grafik['Kumulatif PnL'] = df_grafik['Net PnL'].cumsum()
     st.line_chart(df_grafik, x='Tanggal', y='Kumulatif PnL', use_container_width=True)
     
@@ -144,25 +176,17 @@ if not df.empty:
     col_chart1, col_chart2 = st.columns(2)
     with col_chart1:
         st.markdown("**1. Distribusi Emosi / Strategi Pilihan Manual Anda (Aktif):**")
-        st.bar_chart(df['Emosi_Pilihan_Manual'].value_counts())
+        st.bar_chart(df_active['Emosi_Pilihan_Manual'].value_counts())
     with col_chart2:
         st.markdown("**2. Hasil Audit Tingkat Kesadaran Mental (Komparasi):**")
-        st.bar_chart(df['Audit_Komparasi'].value_counts())
+        st.bar_chart(df_active['Audit_Komparasi'].value_counts())
         
     st.subheader("📜 Buku Riwayat Log Jurnal & Audit Gabungan")
-    st.dataframe(df[['Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi']], use_container_width=True)
+    st.dataframe(df_active[['Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi']], use_container_width=True)
     
     st.markdown("---")
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
-        csv_data = df.to_csv(index=False).encode('utf-8')
-        st.download_button(label="📥 Download Backup Data Jurnal ke Excel/CSV", data=csv_data, file_name="private_trading_journal.csv", mime="text/csv")
+        csv_data = df_active.to_csv(index=False).encode('utf-8')
+        st.download_button(label="📥 Download Backup Data Jurnal ke Excel/CSV", data=csv_data, file_name="trading_journal_export.csv", mime="text/csv")
     with col_btn2:
-        if st.button("🗑️ Reset / Hapus Semua Data", type="primary"):
-            st.session_state.jurnal = pd.DataFrame(columns=[
-                'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 
-                'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
-            ])
-            st.rerun()
-else:
-    st.info("Buku jurnal privat Anda masih kosong. Masukkan data rekap Anda di atas.")
