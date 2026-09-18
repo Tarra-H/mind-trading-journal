@@ -161,17 +161,20 @@ if submit_button:
         audit_komparasi = "✅ Sesuai Trading Plan"
 
     # 4. Buat baris data baru dengan struktur tabel database lengkap
-    new_row = pd.DataFrame([{
-        'Tanggal': str(tanggal),
-        'Jam_Entry': str(jam_entry),
-        'Aset / Broker': broker if broker else "General Broker",
-        'Simbol': simbol,
-        'Tipe': tipe,
-        'Harga Masuk': float(harga_masuk),
-        'Harga Keluar': float(harga_keluar),
-        'Rencana_SL': float(r_sl),
-        'Rencana_TP': float(r_tp),
-        'Ukuran': float(ukuran),
-        'Net PnL': float(net_pnl),
-        'Emosi_Pilihan_Manual': emosi,
-        'Deteksi_Otomatis_Sistem': deteksi_otomatis,
+    new_row = pd.DataFrame({
+        'Tanggal': [str(tanggal)],
+        'Jam_Entry': [str(jam_entry)],
+        'Aset / Broker': [broker if broker else "General Broker"],
+        'Simbol': [simbol],
+        'Tipe': [tipe],
+        'Harga Masuk': [float(harga_masuk)],
+        'Harga Keluar': [float(harga_keluar)],
+        'Rencana_SL': [float(r_sl)],
+        'Rencana_TP': [float(r_tp)],
+        'Ukuran': [float(ukuran)],
+        'Net PnL': [float(net_pnl)],
+        'Emosi_Pilihan_Manual': [emosi],
+        'Deteksi_Otomatis_Sistem': [deteksi_otomatis],
+        'Audit_Komparasi': [audit_komparasi],
+        'Status': [status_aktif]
+    })
