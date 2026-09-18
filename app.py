@@ -47,10 +47,27 @@ if not st.session_state.authenticated:
     login()
     st.stop()
 
+# --- SUNTIKAN KREDENSIAL JSON ASLI (ANTI-BENTROK FORMAT TOML SECARA ABSOLUT) ---
+kredensial_json = {
+  "type": "service_account",
+  "project_id": "nata-trading-journal",
+  "private_key_id": "14d9a91d1035ea3908c102506a054e28bc8e7769",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCWnR/m5qrnIOU8\ngpIPzHo4YwZMiH/dn9/iLB7gqppocwesn8rXLIsVosxSYHG01ctfozlVEeqBCbKH\nrgVuJbGzFbTUb5x9XemaOfldPRxRqycDn3ogpjD0NTCncp8WGkvYWYKKL6zDSctW\nt6lhZq3cblg7MA6ehiy8CDIuXLhQfrPKJxNmIFkNIu3mfj0Scwi0t78T5G5MC3f2\ngOP3LCFHwavtr+NGc+ldPTHDQNCjp4WDr5PV87i/bJ5gompw7kduF57wn99XMBKC\nQboi43qoVXb0K3lSHuHLYLZKg7WBYQ6X+dvptypLgD/tv98BXUecOd+MMcFoDv7M\nmjjLUUl5AgMBAAECggEAEw05Fdoj0CzHEopps3noE+3ixBeYJQ6uIUv3c+/grEmw\ntNNZszI9PbVkJx9wArHwkd5xyCMGCOCTJrqKkU5PVhnuz9h2cR1KCWo/8t1iEaqW\nusyXhD3Bf4Ki7ut+2CrnYSyhaJ1zOxjAke2VjW6Rm4qRuprvnnnWesqGnnq4DeZn\nZgD824Y9aXfpFiZvlRdeaFr169mGtKx5jWTFJ/oMKJ37JDYOXWMKUzS/yUmVzoNs\nCxcwKRhNq4jYXXchqpbyyrSwtxO7HBIpFS+lx7mPvKs+bzY1H0Sil8dXQWDSxrQT\n1d6aMvCg4zX6kRhj9ei6TQLvX5HXhS099dXkq3ICSQKBgQDFx0KkOOyyIVXwl7YP\nvCe4k+vk0dz6dqXVrWcZy2VA8UV989UGYOl7AFx35EvIL53rRrr1RYZpXfi3gaSl\nw947yjDdG8UeCPmO6A+RjKZm0o719XlX0sRikUDNsN3SPsh7swGIPaOsuXiDrGb2\nN05gfowjvB7nWqPdUqvbYfYYiwKBgQDC84B6Zrqx3KDf+CVSOR0RwgMumUC/6sqr\nD0hHZkoNhscqQ68uEWjXiNGQXcWwsAgKkNnWkqLVWHtBKAIuHGYo3SuD5GeQlQOG\nhni4wb0f/rFY9airzAGwUHv2aZhrRdfM85gKAVe97jZ+1N16WeDyLeI3/7c576BF\nopMQ+L6iiwKBgQCu+cwmuEoIil+a/M3Q+/j0XsIbbeQgHuo2sjP96SnKm+qMNTX\npnb8IA1V/5nhvBnwcKyUfMiVcST1YlG+iL008A/K/gXpo1KWGIohxr+9CYNX7Pcf6J\nyWl/ftyjXe/R+0Op1MPtQgNVY72QWO26tVF9I1heoSeCLXm97E8pR3DPYwKBgCGY\nkQWG+pl4Kgku3E+lJAtRYfb/1ha8wZxlD9GuIQjftybjbycDPQwXufWlE1J1o40e\nlUvTDViy3NrHqEiGAFz+cGdUTzytUWQ3fEpqqMsAu1NXUm/4wjm+RP6cB/ZEnQHm\n4MaooJRMnvuQd3KEVq2llpyL5umHEBmwAKQmGcQtAoGATkn0s/K0fUCX7M5cH5cN\n2nm01NiLClxUEkFrzsVeeZWtaeC1Vycs3qZeJ/P0NgBmso4MmladFGUSwTiADmT3\nxgs7ycIMhgpk/ZnoaALioglnIMi0F+iteQvdLKrG7CwPdr7mCKArHhtB5YAjo5hC\nAbF3PqYA4IJXcMk61VY6T28=\n-----END PRIVATE KEY-----\n",
+  "client_email": "natajurnal-bot@://gserviceaccount.com",
+  "client_id": "107675104282005081162",
+  "auth_uri": "https://google.com",
+  "token_uri": "https://googleapis.com",
+  "auth_provider_x509_cert_url": "https://googleapis.com",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/natajurnal-bot%40://gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
+
 # --- CONNECT TO GOOGLE SHEETS DATABASE ---
 try:
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    df_gsheets = conn.read(ttl="0d")
+    # Membaca link langsung dari brankas Secrets khusus link URL saja
+    url_spreadsheet = st.secrets["connections"]["gsheets"]["spreadsheet"]
+    conn = st.connection("gsheets", type=GSheetsConnection, **kredensial_json)
+    df_gsheets = conn.read(spreadsheet=url_spreadsheet, ttl="0d")
     df_gsheets = df_gsheets.dropna(how="all")
 except Exception as e:
     df_gsheets = pd.DataFrame(columns=['Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'])
@@ -141,54 +158,3 @@ with st.form("form_dual_mode", clear_on_submit=True):
 
         new_row = pd.DataFrame([{
             'Tanggal': str(tanggal), 'Jam_Entry': str(jam_entry), 'Aset / Broker': broker if broker else "General Broker", 'Simbol': simbol, 
-            'Tipe': tipe, 'Harga Masuk': float(harga_masuk), 'Harga Keluar': float(harga_keluar), 'Rencana_SL': float(r_sl), 
-            'Rencana_TP': float(r_tp), 'Ukuran': float(ukuran), 'Net PnL': float(pnl), 'Emosi_Pilihan_Manual': emosi_manual, 
-            'Deteksi_Otomatis_Sistem': deteksi_otomatis, 'Audit_Komparasi': audit_komparasi, 'Status': status
-        }])
-        
-        if st.session_state.user_role == "Admin":
-            updated_df = pd.concat([df_gsheets, new_row], ignore_index=True)
-            conn.update(data=updated_df, spreadsheet=st.secrets["connections"]["gsheets"]["spreadsheet"])
-            st.success(f"Transaksi {simbol} BERHASIL dikunci otomatis ke Google Sheets Anda!")
-        else:
-            st.session_state.jurnal_guest = pd.concat([st.session_state.jurnal_guest, new_row], ignore_index=True)
-            st.success(f"Transaksi {simbol} disimpan ke simulasi sementara!")
-            
-        st.rerun()
-
-st.markdown("---")
-
-# 5. DASHBOARD UTAMA VISUALISASI DATA
-st.header("📊 Dashboard Analisis & Komparasi Emosi Trading")
-
-if not df_active.empty:
-    st.subheader("📈 Kurva Pertumbuhan Modal Kumulatif (Equity Curve)")
-    df_grafik = df_active.copy()
-    df_grafik['Net PnL'] = pd.to_numeric(df_grafik['Net PnL'], errors='coerce').fillna(0.0)
-    df_grafik['Kumulatif PnL'] = df_grafik['Net PnL'].cumsum()
-    st.line_chart(df_grafik, x='Tanggal', y='Kumulatif PnL', use_container_width=True)
-    
-    st.markdown("### 🔍 Komparasi Visual: Pilihan Manual Anda vs Deteksi Otomatis Robot")
-    col_chart1, col_chart2 = st.columns(2)
-    with col_chart1:
-        st.bar_chart(df_active['Emosi_Pilihan_Manual'].value_counts())
-    with col_chart2:
-        st.bar_chart(df_active['Audit_Komparasi'].value_counts())
-        
-    st.subheader("📜 Buku Riwayat Log Jurnal & Pengeditan Data")
-    
-    df_editor_ready = df_active.copy()
-    for col in ['Harga Masuk', 'Harga Keluar', 'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL']:
-        df_editor_ready[col] = pd.to_numeric(df_editor_ready[col], errors='coerce').fillna(0.0)
-    
-    konfig_kolom = {
-        "Harga Masuk": st.column_config.NumberColumn(format="%,.2f"),
-        "Harga Keluar": st.column_config.NumberColumn(format="%,.2f"),
-        "Rencana_SL": st.column_config.NumberColumn(format="%,.2f"),
-        "Rencana_TP": st.column_config.NumberColumn(format="%,.2f"),
-        "Ukuran": st.column_config.NumberColumn(format="%,.0f"),
-        "Net PnL": st.column_config.NumberColumn(format="%,.2f")
-    }
-    
-    edited_df = st.data_editor(df_editor_ready, num_rows="dynamic", use_container_width=True, key="jurnal_editor", column_config=konfig_kolom)
-    
