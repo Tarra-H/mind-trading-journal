@@ -157,4 +157,5 @@ with st.form("form_dual_mode", clear_on_submit=True):
             audit_komparasi = "⚠️ Denial (Penyangkalan Diri)"
 
         new_row = pd.DataFrame([{
-            'Tanggal': str(tanggal), 'Jam_Entry': str(jam_entry), 'Aset / Broker': broker if broker else "General Broker", 'Simbol': simbol, 
+            'Tanggal': str(tanggal), 'Jam_Entry': str(jam_entry), 'Aset / Broker': broker if broker else "General Broker", 'Simbol': simbol
+        }])
