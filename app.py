@@ -189,5 +189,5 @@ if not df_active.empty:
         csv_data = df_active.to_csv(index=False).encode('utf-8')
         st.download_button(label="📥 Download Backup Data Jurnal ke Excel/CSV", data=csv_data, file_name="trading_journal_export.csv", mime="text/csv")
     with col_btn2:
+        # PERBAIKAN SPASI TOTAL PADA BLOK TOMBOL RESET DI BAWAH INI
         if st.button("🗑️ Reset / Hapus Semua Data Sesi Ini", type="primary", use_container_width=True):
-            if st.session_state.user_role == "Admin":
