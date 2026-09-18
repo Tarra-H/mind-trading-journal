@@ -47,7 +47,7 @@ if not st.session_state.authenticated:
     login()
     st.stop()
 
-# --- SUNTIKAN KREDENSIAL JSON ASLI (ANTI-BENTROK FORMAT TOML SECARA ABSOLUT) ---
+# --- SUNTIKAN KREDENSIAL JSON ASLI ---
 kredensial_json = {
   "type": "service_account",
   "project_id": "nata-trading-journal",
@@ -58,13 +58,12 @@ kredensial_json = {
   "auth_uri": "https://google.com",
   "token_uri": "https://googleapis.com",
   "auth_provider_x509_cert_url": "https://googleapis.com",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/natajurnal-bot%40://gserviceaccount.com",
+  "client_x509_cert_url": "https://googleapis.com",
   "universe_domain": "googleapis.com"
 }
 
 # --- CONNECT TO GOOGLE SHEETS DATABASE ---
 try:
-    # Membaca link langsung dari brankas Secrets khusus link URL saja
     url_spreadsheet = st.secrets["connections"]["gsheets"]["spreadsheet"]
     conn = st.connection("gsheets", type=GSheetsConnection, **kredensial_json)
     df_gsheets = conn.read(spreadsheet=url_spreadsheet, ttl="0d")
@@ -125,34 +124,17 @@ with st.form("form_dual_mode", clear_on_submit=True):
         simbol = st.text_input("Simbol / Kode Aset (Misal: BBRI / AAPL / XAUUSD)").upper()
         tipe = st.selectbox("Arah Posisi", ["BUY", "SELL"])
         ukuran = st.number_input("Jumlah Ukuran (Lot / Volume Forex)", min_value=0.0, step=1.0, format="%f", value=0.0)
+        
     with col3:
         harga_masuk = st.number_input("Harga Masuk (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
         harga_keluar = st.number_input("Harga Keluar (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
         r_sl = st.number_input("Rencana Stop Loss (Isi 0 jika tidak ada plan)", min_value=0.0, step=1.0, format="%f", value=0.0)
         r_tp = st.number_input("Rencana Take Profit (Isi 0 jika tidak ada plan)", min_value=0.0, step=1.0, format="%f", value=0.0)
-        
-    st.markdown("---")
-    emosi_manual = st.selectbox("🧠 Apa strategi atau emosi yang Anda rasakan saat membuka posisi ini?", 
-                                ["Disiplin Plan", "FOMO / Terburu-buru", "Revenge Trading", "Breakout Setup", "Buy on Weakness"])
-
-    submit = st.form_submit_button("⚡ Simpan & Jalankan Audit Sistem")
-
-    if submit and simbol and ukuran > 0:
-        multiplier = 1 if tipe == "BUY" else -1
-        
-        if "USD" in broker.upper() or "FOREX" in broker.upper():
-            pnl = (harga_keluar - harga_masuk) * ukuran * 100 * multiplier if "XAU" in simbol else (harga_keluar - harga_masuk) * ukuran * 100000 * multiplier
-        elif "IDR" in broker.upper() or "STOCKBIT" in broker.upper() or "AJAIB" in broker.upper():
-            pnl = (harga_keluar - harga_masuk) * (ukuran * 100) * multiplier
-        else:
-                harga_keluar = st.number_input("Harga Keluar (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
-                r_sl = st.number_input("Rencana Stop Loss (Isi 0 jika tidak ada plan)", min_value=0.0, step=1.0, format="%f", value=0.0)
-                r_tp = st.number_input("Rencana Take Profit (Isi 0 jika tidak ada plan)", min_value=0.0, step=1.0, format="%f", value=0.0)
 
     st.markdown(" ")
     emosi = st.selectbox("🧠 Apa strategi atau emosi yang Anda rasakan saat membuka posisi ini?", ["Disiplin Plan", "FOMO (Fear of Missing Out)", "Balas Dendam (Revenge Trading)", "Fear / Takut", "Greed / Serakah"])
     
-    # HANYA ADA SATU TOMBOL SUBMIT RESMI DI SINI
+    # SATU-SATUNYA TOMBOL SUBMIT RESMI FORM
     submit_button = st.form_submit_button("➕ Simpan & Jalankan Audit Sistem", type="primary")
 
 # --- PROSES SIMPAN DATA KETIKA TOMBOL DIKLIK ---
@@ -193,38 +175,3 @@ if submit_button:
         'Net PnL': float(net_pnl),
         'Emosi_Pilihan_Manual': emosi,
         'Deteksi_Otomatis_Sistem': deteksi_otomatis,
-        'Audit_Komparasi': audit_komparasi,
-        'Status': status_aktif
-    }])
-    
-    # 5. Gabungkan ke data yang sudah ada (Database)
-    if st.session_state.user_role == "Admin":
-        df_gsheets = pd.concat([df_gsheets, new_row], ignore_index=True)
-        try:
-            conn.update(spreadsheet=url_spreadsheet, data=df_gsheets)
-            st.success("🔥 Data sukses disimpan permanen ke Google Sheets Pemilik!")
-        except Exception as e:
-            st.error(f"Gagal upload ke Sheets: {e}")
-    else:
-        st.session_state.jurnal_guest = pd.concat([st.session_state.jurnal_guest, new_row], ignore_index=True)
-        df_active = st.session_state.jurnal_guest
-        st.success("⚡ Data masuk ke Sandbox Tamu (Sesi Sementara)!")
-    st.rerun()
-
-# --- 📊 BAGIAN DASHBOARD GRAFIK KINERJA ---
-st.header("📊 Analisis Performa & Grafik Modal")
-
-if not df_active.empty and 'Net PnL' in df_active.columns:
-    # Memastikan data Net PnL terbaca sebagai angka
-    df_active['Net PnL'] = pd.to_numeric(df_active['Net PnL'], errors='coerce').fillna(0)
-    
-    # Menghitung akumulasi kurva modal
-    df_active['Kumulatif_Profit'] = df_active['Net PnL'].cumsum()
-    
-    # Menampilkan visualisasi grafik garis di web Streamlit
-    st.line_chart(df_active, x='Tanggal', y='Kumulatif_Profit', use_container_width=True)
-    
-    # Tampilkan rangkuman tabel data di bawahnya
-    st.dataframe(df_active, use_container_width=True)
-else:
-    st.info("ℹ️ Belum ada data transaksi yang tersimpan. Grafik kurva pertumbuhan modal akan muncul di sini setelah Anda memasukkan data pertama.")
