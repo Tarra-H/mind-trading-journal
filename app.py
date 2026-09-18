@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import datetime
+from streamlit_gsheets import GSheetsConnection
 
 # 1. KONFIGURASI HALAMAN UTAMA WEB
 st.set_page_config(page_title="🔒 Secure Private Journal", layout="wide", initial_sidebar_state="expanded")
@@ -10,19 +11,6 @@ if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 if 'user_role' not in st.session_state:
     st.session_state.user_role = None
-
-# Inisialisasi database privat di memori lokal browser
-if 'jurnal_admin' not in st.session_state:
-    st.session_state.jurnal_admin = pd.DataFrame(columns=[
-        'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 
-        'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
-    ])
-
-if 'jurnal_guest' not in st.session_state:
-    st.session_state.jurnal_guest = pd.DataFrame(columns=[
-        'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 
-        'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
-    ])
 
 def login():
     st.title("🔒 Nata Mind Trading Journal - Gateway")
@@ -48,9 +36,8 @@ def login():
             st.session_state.user_role = "Guest"
             st.rerun()
 
-    # --- Fitur Utama Info Depan ---
     st.markdown("---")
-    st.header("✨ Fitur Unggulan Nata Mind Trading Journal")
+    st.header("✨ Fitur Utama Nata Mind Trading Journal")
     st.info("📈 **Kurva Akumulasi Profit:** Memetakan grafik pertumbuhan modal (Equity Curve) secara real-time.")
     st.warning("🧠 **Audit Psikologi Otomatis:** Mendeteksi dan membandingkan emosi manual Anda dengan matematika pasar.")
     st.success("🛡️ **Manajemen Risiko Terunci:** Kalkulator Lot otomatis terintegrasi berdasarkan batas toleransi kerugian.")
@@ -60,15 +47,25 @@ if not st.session_state.authenticated:
     login()
     st.stop()
 
-# --- PILIHAN DATABASE BERDASARKAN ROLE LOGIN ---
+# --- CONNECT TO GOOGLE SHEETS DATABASE ---
+try:
+    conn = st.connection("gsheets", type=GSheetsConnection)
+    df_gsheets = conn.read(ttl="0d")
+    df_gsheets = df_gsheets.dropna(how="all")
+except Exception as e:
+    df_gsheets = pd.DataFrame(columns=['Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'])
+
+# Mode Pemisahan Sesi
 if st.session_state.user_role == "Admin":
-    df_active = st.session_state.jurnal_admin
+    df_active = df_gsheets
     role_text = "🔑 AKUN PEMILIK (ADMIN)"
-    caption_text = "Status Keamanan: Akses Penuh. Data tersimpan di database privat Anda."
+    caption_text = "Status Keamanan: Koneksi Enkripsi GSheets Aktif. Data tersimpan otomatis di Google Drive Anda."
 else:
+    if 'jurnal_guest' not in st.session_state:
+        st.session_state.jurnal_guest = df_gsheets.copy()
     df_active = st.session_state.jurnal_guest
     role_text = "👥 AKUN TAMU (GUEST MODE)"
-    caption_text = "Status: Mode Sandbox Sampel. Anda bisa mencoba input, data akan terhapus jika browser di-refresh."
+    caption_text = "Status: Mode Sandbox Sampel. Pengunjung bisa mencoba input, namun data tidak akan masuk ke Google Sheets Anda."
 
 # TOMBOL LOGOUT AMAN DI SIDEBAR KIRI
 st.sidebar.markdown(f"### Status Sesi:\n**{role_text}**")
@@ -100,11 +97,8 @@ with st.form("form_dual_mode", clear_on_submit=True):
     with col1:
         tanggal = st.date_input("Tanggal Transaksi", value=datetime.date.today())
         jam_entry = st.time_input("Jam Masuk Posisi (Isi seadanya jika malas/ribet)", value=datetime.time(0, 0))
-        
-        # OPSI COMBOBOX PREMIUM UNIVERSAL
         pilihan_broker_standar = ["Stockbit IDR", "Ajaib IDR", "Gotrade USD", "Exness USD", "XM Forex USD", "Lainnya (Ketik Manual)..."]
         broker_pilih = st.selectbox("Platform / Broker", pilihan_broker_standar)
-        
         if broker_pilih == "Lainnya (Ketik Manual)...":
             broker = st.text_input("Ketik Nama Broker Anda (Contoh: Indo Premier IDR, Binance USD)").strip()
         else:
@@ -138,7 +132,6 @@ with st.form("form_dual_mode", clear_on_submit=True):
             
         status = "WIN" if pnl > 0 else "LOSS" if pnl < 0 else "BREAKEVEN"
         deteksi_otomatis = "Disiplin Plan"
-        
         if r_sl == 0 and r_tp == 0:
             deteksi_otomatis = "FOMO / Terburu-buru"
             
@@ -146,21 +139,21 @@ with st.form("form_dual_mode", clear_on_submit=True):
         if emosi_manual != deteksi_otomatis:
             audit_komparasi = "⚠️ Denial (Penyangkalan Diri)"
 
-        new_row = {
-            'Tanggal': tanggal, 'Jam_Entry': jam_entry, 'Aset / Broker': broker if broker else "General Broker", 'Simbol': simbol, 
-            'Tipe': tipe, 'Harga Masuk': harga_masuk, 'Harga Keluar': harga_keluar, 'Rencana_SL': r_sl, 
-            'Rencana_TP': r_tp, 'Ukuran': ukuran, 'Net PnL': pnl, 'Emosi_Pilihan_Manual': emosi_manual, 
+        new_row = pd.DataFrame([{
+            'Tanggal': str(tanggal), 'Jam_Entry': str(jam_entry), 'Aset / Broker': broker if broker else "General Broker", 'Simbol': simbol, 
+            'Tipe': tipe, 'Harga Masuk': float(harga_masuk), 'Harga Keluar': float(harga_keluar), 'Rencana_SL': float(r_sl), 
+            'Rencana_TP': float(r_tp), 'Ukuran': float(ukuran), 'Net PnL': float(pnl), 'Emosi_Pilihan_Manual': emosi_manual, 
             'Deteksi_Otomatis_Sistem': deteksi_otomatis, 'Audit_Komparasi': audit_komparasi, 'Status': status
-        }
+        }])
         
         if st.session_state.user_role == "Admin":
-            st.session_state.jurnal_admin = pd.concat([st.session_state.jurnal_admin, pd.DataFrame([new_row])], ignore_index=True)
-            df_active = st.session_state.jurnal_admin
-        if st.session_state.user_role == "Guest":
-            st.session_state.jurnal_guest = pd.concat([st.session_state.jurnal_guest, pd.DataFrame([new_row])], ignore_index=True)
-            df_active = st.session_state.jurnal_guest
+            updated_df = pd.concat([df_gsheets, new_row], ignore_index=True)
+            conn.update(data=updated_df, spreadsheet=st.secrets["connections"]["gsheets"]["spreadsheet"])
+            st.success(f"Transaksi {simbol} BERHASIL dikunci otomatis ke Google Sheets Anda!")
+        else:
+            st.session_state.jurnal_guest = pd.concat([st.session_state.jurnal_guest, new_row], ignore_index=True)
+            st.success(f"Transaksi {simbol} disimpan ke simulasi sementara!")
             
-        st.success(f"Transaksi {simbol} berhasil disimpan!")
         st.rerun()
 
 st.markdown("---")
@@ -171,6 +164,7 @@ st.header("📊 Dashboard Analisis & Komparasi Emosi Trading")
 if not df_active.empty:
     st.subheader("📈 Kurva Pertumbuhan Modal Kumulatif (Equity Curve)")
     df_grafik = df_active.copy()
+    df_grafik['Net PnL'] = pd.to_numeric(df_grafik['Net PnL'], errors='coerce').fillna(0.0)
     df_grafik['Kumulatif PnL'] = df_grafik['Net PnL'].cumsum()
     st.line_chart(df_grafik, x='Tanggal', y='Kumulatif PnL', use_container_width=True)
     
@@ -183,14 +177,18 @@ if not df_active.empty:
         
     st.subheader("📜 Buku Riwayat Log Jurnal & Pengeditan Data")
     
-    # FORMAT MATEMATIKA AMAN (100% BEBAS DARI ERROR KOTAK HITAM)
-    # Mengonversi seluruh angka ribuan menjadi string dengan format koma internasional sebelum masuk ke tabel
-    df_visual = df_active.copy()
+    df_editor_ready = df_active.copy()
     for col in ['Harga Masuk', 'Harga Keluar', 'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL']:
-        df_visual[col] = df_visual[col].apply(lambda x: f"{x:,.2f}" if isinstance(x, (int, float)) else x)
+        df_editor_ready[col] = pd.to_numeric(df_editor_ready[col], errors='coerce').fillna(0.0)
     
-    # Memanggil tabel data editor murni yang super ringan dan stabil
-    edited_df = st.data_editor(df_visual, num_rows="dynamic", use_container_width=True, key="jurnal_editor")
+    konfig_kolom = {
+        "Harga Masuk": st.column_config.NumberColumn(format="%,.2f"),
+        "Harga Keluar": st.column_config.NumberColumn(format="%,.2f"),
+        "Rencana_SL": st.column_config.NumberColumn(format="%,.2f"),
+        "Rencana_TP": st.column_config.NumberColumn(format="%,.2f"),
+        "Ukuran": st.column_config.NumberColumn(format="%,.0f"),
+        "Net PnL": st.column_config.NumberColumn(format="%,.2f")
+    }
     
-    # Mengembalikan format teks string kembali menjadi angka murni agar memori penyimpanan internal tidak error saat disave
-    df_save = edited_df.copy()
+    edited_df = st.data_editor(df_editor_ready, num_rows="dynamic", use_container_width=True, key="jurnal_editor", column_config=konfig_kolom)
+    
