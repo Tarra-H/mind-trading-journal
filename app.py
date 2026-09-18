@@ -113,7 +113,6 @@ with st.form("form_dual_mode", clear_on_submit=True):
     with col2:
         simbol = st.text_input("Simbol / Kode Aset (Misal: BBRI / AAPL / XAUUSD)").upper()
         tipe = st.selectbox("Arah Posisi", ["BUY", "SELL"])
-        # Tetap Lot yang diketik user
         ukuran = st.number_input("Jumlah Ukuran (Lot / Volume Forex)", min_value=0.0, step=1.0, format="%f", value=0.0)
     with col3:
         harga_masuk = st.number_input("Harga Masuk (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
@@ -130,11 +129,9 @@ with st.form("form_dual_mode", clear_on_submit=True):
     if submit and simbol and ukuran > 0:
         multiplier = 1 if tipe == "BUY" else -1
         
-        # ✨ RUMUS BARU: SISTEM MULTIPLIER PINTAR (OTOMATIS KALI KAN 100 UNTUK SAHAM INDONESIA)
         if "USD" in broker.upper() or "FOREX" in broker.upper():
             pnl = (harga_keluar - harga_masuk) * ukuran * 100 * multiplier if "XAU" in simbol else (harga_keluar - harga_masuk) * ukuran * 100000 * multiplier
         elif "IDR" in broker.upper() or "STOCKBIT" in broker.upper() or "AJAIB" in broker.upper():
-            # Otomatis dikalikan 100 Lembar karena input user adalah satuan LOT asli Indonesia
             pnl = (harga_keluar - harga_masuk) * (ukuran * 100) * multiplier
         else:
             pnl = (harga_keluar - harga_masuk) * ukuran * multiplier
@@ -185,12 +182,18 @@ if not df_active.empty:
         st.bar_chart(df_active['Audit_Komparasi'].value_counts())
         
     st.subheader("📜 Buku Riwayat Log Jurnal & Pengeditan Data")
-    edited_df = st.data_editor(df_active, num_rows="dynamic", use_container_width=True, key="jurnal_editor")
     
-    if st.session_state.user_role == "Admin":
-        st.session_state.jurnal_admin = edited_df
-    if st.session_state.user_role == "Guest":
-        st.session_state.jurnal_guest = edited_df
+    # Pastikan tipe data kolom angka adalah numerik murni sebelum dirender ke editor
+    df_editor_ready = df_active.copy()
+    for col in ['Harga Masuk', 'Harga Keluar', 'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL']:
+        df_editor_ready[col] = pd.to_numeric(df_editor_ready[col], errors='coerce').fillna(0.0)
     
-    st.markdown("---")
-    csv_data = edited_df.to_csv(index=False).encode('utf-8')
+    # ✨ FORMAT PUNCAK: Menggunakan sistem kacamata pelapis bilangan internasional standar US/UK (Koma ribuan, titik desimal)
+    edited_df = st.data_editor(
+        df_editor_ready,
+        num_rows="dynamic",
+        use_container_width=True,
+        key="jurnal_editor",
+        column_config={
+            "Harga Masuk": st.column_config.NumberColumn(format="%,.2f"),
+            "Harga Keluar": st.column_config.NumberColumn(format="%,.2f"),
