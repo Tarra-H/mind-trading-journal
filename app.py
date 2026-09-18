@@ -48,7 +48,7 @@ def login():
             st.session_state.user_role = "Guest"
             st.rerun()
 
-    # --- Fitur Unggulan Teks Ringkas (Aman Tanpa Error) ---
+    # --- Fitur Unggulan Teks Ringkas ---
     st.markdown("---")
     st.header("✨ Fitur Unggulan Nata Mind Trading Journal")
     st.info("📈 **Kurva Akumulasi Profit:** Memetakan grafik pertumbuhan modal (Equity Curve) secara real-time.")
@@ -113,7 +113,8 @@ with st.form("form_dual_mode", clear_on_submit=True):
     with col2:
         simbol = st.text_input("Simbol / Kode Aset (Misal: BBRI / AAPL / XAUUSD)").upper()
         tipe = st.selectbox("Arah Posisi", ["BUY", "SELL"])
-        ukuran = st.number_input("Jumlah Ukuran (Lot / Lembar Saham)", min_value=0.0, step=1.0, format="%f", value=0.0)
+        # Tetap Lot yang diketik user
+        ukuran = st.number_input("Jumlah Ukuran (Lot / Volume Forex)", min_value=0.0, step=1.0, format="%f", value=0.0)
     with col3:
         harga_masuk = st.number_input("Harga Masuk (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
         harga_keluar = st.number_input("Harga Keluar (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
@@ -129,10 +130,14 @@ with st.form("form_dual_mode", clear_on_submit=True):
     if submit and simbol and ukuran > 0:
         multiplier = 1 if tipe == "BUY" else -1
         
-        # LOGIKA LINEAR SEDERHANA (100% BEBAS DARI ERROR ELSE SPASI)
-        pnl = (harga_keluar - harga_masuk) * ukuran * multiplier
+        # ✨ RUMUS BARU: SISTEM MULTIPLIER PINTAR (OTOMATIS KALI KAN 100 UNTUK SAHAM INDONESIA)
         if "USD" in broker.upper() or "FOREX" in broker.upper():
             pnl = (harga_keluar - harga_masuk) * ukuran * 100 * multiplier if "XAU" in simbol else (harga_keluar - harga_masuk) * ukuran * 100000 * multiplier
+        elif "IDR" in broker.upper() or "STOCKBIT" in broker.upper() or "AJAIB" in broker.upper():
+            # Otomatis dikalikan 100 Lembar karena input user adalah satuan LOT asli Indonesia
+            pnl = (harga_keluar - harga_masuk) * (ukuran * 100) * multiplier
+        else:
+            pnl = (harga_keluar - harga_masuk) * ukuran * multiplier
             
         status = "WIN" if pnl > 0 else "LOSS" if pnl < 0 else "BREAKEVEN"
         deteksi_otomatis = "Disiplin Plan"
@@ -189,6 +194,3 @@ if not df_active.empty:
     
     st.markdown("---")
     csv_data = edited_df.to_csv(index=False).encode('utf-8')
-    st.download_button(label="📥 Download Backup Data Jurnal ke Excel/CSV", data=csv_data, file_name="trading_journal_export.csv", mime="text/csv", use_container_width=True)
-else:
-    st.info("Buku jurnal privat Anda masih kosong. Masukkan data rekap dengan angka di atas (Contoh: Saham BBRI, Jumlah 500, Entry 4000, Exit 4500) lalu klik simpan untuk mengaktifkan grafik kurva modal secara instan!")
