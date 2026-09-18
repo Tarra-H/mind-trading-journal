@@ -57,7 +57,7 @@ def login():
     st.subheader("📈 Contoh Grafik Akumulasi Keuntungan (Equity Curve)")
     data_demo = pd.DataFrame({
         'Hari': ['Hari 1', 'Hari 2', 'Hari 3', 'Hari 4', 'Hari 5', 'Hari 6', 'Hari 7'],
-        'Profit Kumulatif': [0, 150000, 100000, 450000, 600000, 500000, 950000]
+        'Profit Kumulatif': [0, 150000, 100000, 450000, 350000, 700000, 950000]
     })
     st.line_chart(data_demo, x='Hari', y='Profit Kumulatif', use_container_width=True)
     
@@ -121,7 +121,7 @@ with st.form("form_dual_mode", clear_on_submit=True):
         tanggal = st.date_input("Tanggal Transaksi", value=datetime.date.today())
         jam_entry = st.time_input("Jam Masuk Posisi (Isi seadanya jika malas/ribet)", value=datetime.time(0, 0))
         
-        # ✨ UPDATE: SISTEM COMBOBOX (PILIH + KETIK BEBAS) UNIVERSAL DENGAN INFORMASI MANDIRI
+        # OPSI COMBOBOX PREMIUM
         pilihan_broker_standar = ["Stockbit IDR", "Ajaib IDR", "Gotrade USD", "Exness USD", "XM Forex USD", "Lainnya (Ketik Manual)..."]
         broker_pilih = st.selectbox("Platform / Broker", pilihan_broker_standar)
         
@@ -150,7 +150,7 @@ with st.form("form_dual_mode", clear_on_submit=True):
 
     if submit and simbol and ukuran > 0:
         multiplier = 1 if tipe == "BUY" else -1
-        # Logika pembacaan cerdas: mendeteksi mata uang dari pilihan atau ketikan bebas
+        # Logika pembacaan mata uang otomatis
         if "USD" in broker.upper() or "FOREX" in broker.upper():
             pnl = (harga_keluar - harga_masuk) * ukuran * 100 * multiplier if "XAU" in simbol else (harga_keluar - harga_masuk) * ukuran * 100000 * multiplier
         else:
@@ -184,3 +184,4 @@ with st.form("form_dual_mode", clear_on_submit=True):
         new_row = {
             'Tanggal': tanggal, 'Jam_Entry': jam_entry, 'Aset / Broker': broker if broker else "General Broker", 'Simbol': simbol, 
             'Tipe': tipe, 'Harga Masuk': harga_masuk, 'Harga Keluar': harga_keluar, 'Rencana_SL': r_sl, 
+            'Rencana_TP': r_tp, 'Ukuran': ukuran, 'Net PnL': pnl, 'Emosi_Pilihan_Manual': emosi_manual, 
