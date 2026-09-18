@@ -24,7 +24,6 @@ if 'jurnal_guest' not in st.session_state:
         'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
     ])
 
-# 📌 HALAMAN DEPAN DENGAN PREVIEW/TEASER UNTUK PUBLIK
 def login():
     st.title("🔒 Nata Mind Trading Journal - Gateway")
     st.markdown("Selamat datang! Silakan login sebagai Pemilik untuk mengisi data riwayat, atau gunakan Akun Tamu untuk mencoba fitur simulasi sampel.")
@@ -49,29 +48,32 @@ def login():
             st.session_state.user_role = "Guest"
             st.rerun()
 
-    # --- ✨ BAGIAN BARU: SCREENSHOT / PREVIEW BENTUK DALAM JURNAL UNTUK MENARIK MINAT PUBLIK ---
+    # --- ✨ BAGIAN PREVIEW FITUR UNTUK PUBLIK ---
     st.markdown("---")
     st.header("✨ Cuplikan Fitur & Tampilan Dalam Aplikasi (Preview)")
     st.markdown("Berikut adalah simulasi bagaimana sistem mengolah data trading dan mendeteksi kondisi psikologis Anda secara otomatis:")
     
-    # 1. Contoh Grafik Kurva Pertumbuhan
+    # 1. Contoh Grafik Kurva Pertumbuhan (DATA SUDAH DIPERBAIKI)
     st.subheader("📈 Contoh Grafik Akumulasi Keuntungan (Equity Curve)")
     data_demo = pd.DataFrame({
         'Hari': ['Hari 1', 'Hari 2', 'Hari 3', 'Hari 4', 'Hari 5', 'Hari 6', 'Hari 7'],
-        'Profit Kumulatif (Rp)': [0, 450000, 200000, 950000, 1500000, 1100000, 2300000]
+        'Profit Kumulatif': [0, 500000, 300000, 900000, 1500000, 1200000, 2100000]
     })
-    st.line_chart(data_demo, x='Hari', y='Profit Kumulatif (Rp)', use_container_width=True)
+    st.line_chart(data_demo, x='Hari', y='Profit Kumulatif', use_container_width=True)
     
-    # 2. Contoh Grafik Emosi
+    # 2. Contoh Grafik Emosi (DATA SUDAH DIPERBAIKI)
     col_demo1, col_demo2 = st.columns(2)
     with col_demo1:
         st.markdown("**📊 Deteksi Gangguan Psikologi Terbanyak:**")
-        emosi_demo = pd.Series([12, 4, 2], index=["Disiplin Plan", "FOMO / Terburu-buru", "🚨 Revenge Trading"])
-        st.bar_chart(emosi_demo)
+        data_emosi_demo = pd.DataFrame({
+            'Kondisi': ["Disiplin Plan", "FOMO", "Revenge Trading"],
+            'Jumlah': [12, 5, 3]
+        })
+        st.bar_chart(data_emosi_demo, x='Kondisi', y='Jumlah', use_container_width=True)
     with col_demo2:
         st.markdown("**🛡️ Contoh Rapor Evaluasi Coach AI:**")
-        st.error("🔴 **Deteksi Sistem:** Anda terdeteksi melakukan Revenge Trading sebanyak 2 kali minggu ini. Tindakan emosional ini memotong performa profit bersih Anda sebesar 35%.")
-        st.success("🍏 **Sisi Positif:** Strategi Swing Saham Stockbit Anda berjalan 100% disiplin sesuai Trading Plan.")
+        st.error("🔴 Deteksi Sistem: Anda terdeteksi melakukan Revenge Trading sebanyak 2 kali minggu ini. Tindakan emosional ini memotong performa profit bersih Anda sebesar 35%.")
+        st.success("🍏 Sisi Positif: Strategi Swing Saham Stockbit Anda berjalan 100% disiplin sesuai Trading Plan.")
 
 # Jika belum login, stop aplikasi dan tampilkan halaman login + preview
 if not st.session_state.authenticated:
@@ -140,7 +142,6 @@ with st.form("form_dual_mode", clear_on_submit=True):
         if "Exness" in broker:
             pnl = (harga_keluar - harga_masuk) * ukuran * 100 * multiplier if "XAU" in simbol else (harga_keluar - harga_masuk) * ukuran * 100000 * multiplier
         else:
-            pnl = (harga_keluar - harga_masuk) * Pattern * multiplier
             pnl = (harga_keluar - harga_masuk) * ukuran * multiplier
             
         status = "WIN" if pnl > 0 else "LOSS" if pnl < 0 else "BREAKEVEN"
