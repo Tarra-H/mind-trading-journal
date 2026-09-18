@@ -48,7 +48,7 @@ def login():
             st.session_state.user_role = "Guest"
             st.rerun()
 
-    # --- ✨ BAGIAN CUPLIKAN PREVIEW FITUR (FORMAT AMAN TANPA GRAFIK ERROR) ---
+    # --- ✨ BAGIAN PREVIEW FITUR UNTUK PUBLIK ---
     st.markdown("---")
     st.header("✨ Fitur Unggulan Nata Mind Trading Journal")
     st.markdown("Sistem asisten pintar ini dirancang untuk mendeteksi kesehatan psikologi dan performa trading Anda secara otomatis:")
@@ -113,7 +113,7 @@ with st.form("form_dual_mode", clear_on_submit=True):
         
         if broker_pilih == "Lainnya (Ketik Manual)...":
             broker = st.text_input("Ketik Nama Broker Anda (Contoh: Indo Premier IDR, Binance USD)").strip()
-            st.caption("ℹ️ *Ketik nama broker Anda bebas. Berikan imbuhan 'IDR' atau 'USD' di ujung nama agar rumus mata uang berfungsi otomatis.*")
+            st.caption("ℹ *Ketik nama broker Anda bebas. Berikan imbuhan 'IDR' atau 'USD' di ujung nama agar rumus mata uang berfungsi otomatis.*")
         else:
             broker = broker_pilih
             st.caption("💡 *Jika broker Anda tidak ada di pilihan drop-down di atas, silakan klik opsi paling bawah 'Lainnya (Ketik Manual)...' untuk menulis mandiri.*")
@@ -121,12 +121,14 @@ with st.form("form_dual_mode", clear_on_submit=True):
     with col2:
         simbol = st.text_input("Simbol / Kode Aset (Misal: BBRI / AAPL / XAUUSD)").upper()
         tipe = st.selectbox("Arah Posisi", ["BUY", "SELL"])
-        ukuran = st.number_input("Jumlah Ukuran (Lot / Lembar Saham)", min_value=0.0, format="%.2f")
+        # Mengubah format ukuran menjadi float fleksibel agar tampilan bersih
+        ukuran = st.number_input("Jumlah Ukuran (Lot / Lembar Saham)", min_value=0.0, step=1.0, format="%f", value=0.0)
     with col3:
-        harga_masuk = st.number_input("Harga Masuk (Rata-rata)", min_value=0.0, format="%.5f")
-        harga_keluar = st.number_input("Harga Keluar (Rata-rata)", min_value=0.0, format="%.5f")
-        r_sl = st.number_input("Rencana Stop Loss (Isi 0 jika tidak ada plan)", min_value=0.0, format="%.5f")
-        r_tp = st.number_input("Rencana Take Profit (Isi 0 jika tidak ada plan)", min_value=0.0, format="%.5f")
+        # FORMAT BARU: Menggunakan "%f" fleksibel tanpa paksaan 5 angka nol di belakang koma untuk tampilan clean
+        harga_masuk = st.number_input("Harga Masuk (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
+        harga_keluar = st.number_input("Harga Keluar (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
+        r_sl = st.number_input("Rencana Stop Loss (Isi 0 jika tidak ada plan)", min_value=0.0, step=1.0, format="%f", value=0.0)
+        r_tp = st.number_input("Rencana Take Profit (Isi 0 jika tidak ada plan)", min_value=0.0, step=1.0, format="%f", value=0.0)
         
     st.markdown("---")
     emosi_manual = st.selectbox("🧠 Apa strategi atau emosi yang Anda rasakan saat membuka posisi ini?", 
@@ -178,8 +180,3 @@ with st.form("form_dual_mode", clear_on_submit=True):
             st.session_state.jurnal_admin = pd.concat([st.session_state.jurnal_admin, pd.DataFrame([new_row])], ignore_index=True)
             df_active = st.session_state.jurnal_admin
         else:
-            st.session_state.jurnal_guest = pd.concat([st.session_state.jurnal_guest, pd.DataFrame([new_row])], ignore_index=True)
-            df_active = st.session_state.jurnal_guest
-            
-        st.success(f"Transaksi {simbol} berhasil disimpan!")
-
