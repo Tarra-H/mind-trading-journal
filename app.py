@@ -134,7 +134,7 @@ with st.form("form_dual_mode", clear_on_submit=True):
     st.markdown(" ")
     emosi = st.selectbox("🧠 Apa strategi atau emosi yang Anda rasakan saat membuka posisi ini?", ["Disiplin Plan", "FOMO (Fear of Missing Out)", "Balas Dendam (Revenge Trading)", "Fear / Takut", "Greed / Serakah"])
     
-    # TOMBOL SUBMIT RESMI FORM (SIMBOL +)
+    # TOMBOL SUBMIT RESMI FORM
     submit_button = st.form_submit_button("➕ Simpan & Jalankan Audit Sistem", type="primary")
 
 # --- PROSES SIMPAN DATA KETIKA TOMBOL DIKLIK ---
@@ -173,4 +173,3 @@ if submit_button:
         'Rencana_TP': [float(r_tp)],
         'Ukuran': [float(ukuran)],
         'Net PnL': [float(net_pnl)],
-        'Emosi_Pilihan_Manual': [emosi],
