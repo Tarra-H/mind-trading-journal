@@ -57,7 +57,7 @@ def login():
     st.subheader("📈 Contoh Grafik Akumulasi Keuntungan (Equity Curve)")
     data_demo = pd.DataFrame({
         'Hari': ['Hari 1', 'Hari 2', 'Hari 3', 'Hari 4', 'Hari 5', 'Hari 6', 'Hari 7'],
-        'Profit Kumulatif': [100000, 250000, 150000, 400000, 650000, 580000, 900000]
+        'Profit Kumulatif': [0, 150000, 100000, 450000, 600000, 500000, 950000]
     })
     st.line_chart(data_demo, x='Hari', y='Profit Kumulatif', use_container_width=True)
     
@@ -120,8 +120,18 @@ with st.form("form_dual_mode", clear_on_submit=True):
     with col1:
         tanggal = st.date_input("Tanggal Transaksi", value=datetime.date.today())
         jam_entry = st.time_input("Jam Masuk Posisi (Isi seadanya jika malas/ribet)", value=datetime.time(0, 0))
-        # KODE BARU: Menjadi kolom teks ketik bebas untuk mendukung seluruh broker publik global
-        broker = st.text_input("Platform / Broker (Contoh: Stockbit IDR, Exness USD, Ajaib IDR)").strip()
+        
+        # ✨ UPDATE: SISTEM COMBOBOX (PILIH + KETIK BEBAS) UNIVERSAL DENGAN INFORMASI MANDIRI
+        pilihan_broker_standar = ["Stockbit IDR", "Ajaib IDR", "Gotrade USD", "Exness USD", "XM Forex USD", "Lainnya (Ketik Manual)..."]
+        broker_pilih = st.selectbox("Platform / Broker", pilihan_broker_standar)
+        
+        if broker_pilih == "Lainnya (Ketik Manual)...":
+            broker = st.text_input("Ketik Nama Broker Anda (Contoh: Indo Premier IDR, Binance USD)").strip()
+            st.caption("ℹ️ *Ketik nama broker Anda bebas. Berikan imbuhan 'IDR' atau 'USD' di ujung nama agar rumus mata uang berfungsi otomatis.*")
+        else:
+            broker = broker_pilih
+            st.caption("💡 *Jika broker Anda tidak ada di pilihan drop-down di atas, silakan klik opsi paling bawah 'Lainnya (Ketik Manual)...' untuk menulis mandiri.*")
+            
     with col2:
         simbol = st.text_input("Simbol / Kode Aset (Misal: BBRI / AAPL / XAUUSD)").upper()
         tipe = st.selectbox("Arah Posisi", ["BUY", "SELL"])
@@ -140,7 +150,7 @@ with st.form("form_dual_mode", clear_on_submit=True):
 
     if submit and simbol and ukuran > 0:
         multiplier = 1 if tipe == "BUY" else -1
-        # Logika matematika cerdas: membaca tipe perhitungan mata uang dari teks ketik bebas pengguna
+        # Logika pembacaan cerdas: mendeteksi mata uang dari pilihan atau ketikan bebas
         if "USD" in broker.upper() or "FOREX" in broker.upper():
             pnl = (harga_keluar - harga_masuk) * ukuran * 100 * multiplier if "XAU" in simbol else (harga_keluar - harga_masuk) * ukuran * 100000 * multiplier
         else:
@@ -163,7 +173,7 @@ with st.form("form_dual_mode", clear_on_submit=True):
                 deteksi_otomatis = "Disiplin Plan"
         
         if deteksi_otomatis == "Belum Terbaca (Butuh Data Presisi)":
-            audit_komparasi = "ℹ️ Mode Manual Aktif (Otomatis Off)"
+            audit_komparasi = "ℹ️ Mode Manual Hack (Otomatis Off)"
         elif emosi_manual == deteksi_otomatis:
             audit_komparasi = "✅ Sinkron (Anda Paham Diri Anda)"
         elif emosi_manual == "Disiplin Plan" and deteksi_otomatis in ["Revenge Trading", "FOMO / Terburu-buru"]:
@@ -174,14 +184,3 @@ with st.form("form_dual_mode", clear_on_submit=True):
         new_row = {
             'Tanggal': tanggal, 'Jam_Entry': jam_entry, 'Aset / Broker': broker if broker else "General Broker", 'Simbol': simbol, 
             'Tipe': tipe, 'Harga Masuk': harga_masuk, 'Harga Keluar': harga_keluar, 'Rencana_SL': r_sl, 
-            'Rencana_TP': r_tp, 'Ukuran': ukuran, 'Net PnL': pnl, 'Emosi_Pilihan_Manual': emosi_manual, 
-            'Deteksi_Otomatis_Sistem': deteksi_otomatis, 'Audit_Komparasi': audit_komparasi, 'Status': status
-        }
-        
-        if st.session_state.user_role == "Admin":
-            st.session_state.jurnal_admin = pd.concat([st.session_state.jurnal_admin, pd.DataFrame([new_row])], ignore_index=True)
-            df_active = st.session_state.jurnal_admin
-        else:
-            st.session_state.jurnal_guest = pd.concat([st.session_state.jurnal_guest, pd.DataFrame([new_row])], ignore_index=True)
-            df_active = st.session_state.jurnal_guest
-            
