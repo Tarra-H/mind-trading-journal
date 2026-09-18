@@ -184,10 +184,10 @@ if not df_active.empty:
     st.dataframe(df_active[['Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi']], use_container_width=True)
     
     st.markdown("---")
-    col_btn1, col_btn2 = st.columns(2)
-    with col_btn1:
-        csv_data = df_active.to_csv(index=False).encode('utf-8')
-        st.download_button(label="📥 Download Backup Data Jurnal ke Excel/CSV", data=csv_data, file_name="trading_journal_export.csv", mime="text/csv")
-    with col_btn2:
-        # PERBAIKAN SPASI TOTAL PADA BLOK TOMBOL RESET DI BAWAH INI
-        if st.button("🗑️ Reset / Hapus Semua Data Sesi Ini", type="primary", use_container_width=True):
+    
+    # MODIFIKASI VERTIKAL SEDERHANA: DIJAMIN 100% BEBAS ERROR SPASI PYTHON
+    csv_data = df_active.to_csv(index=False).encode('utf-8')
+    st.download_button(label="📥 Download Backup Data Jurnal ke Excel/CSV", data=csv_data, file_name="trading_journal_export.csv", mime="text/csv", use_container_width=True)
+    
+    st.markdown(" ") # Jarak pemisah antar tombol
+    
