@@ -156,6 +156,31 @@ with st.form("form_dual_mode", clear_on_submit=True):
         if emosi_manual != deteksi_otomatis:
             audit_komparasi = "⚠️ Denial (Penyangkalan Diri)"
 
-        new_row = pd.DataFrame([{
-            'Tanggal': str(tanggal), 'Jam_Entry': str(jam_entry), 'Aset / Broker': broker if broker else "General Broker", 'Simbol': simbol
-        }])
+            # Menghitung otomatis Net PnL (Keuntungan / Kerugian bersih)
+    if tipe == "BUY":
+        pnl_mentah = (harga_keluar - harga_masuk) * ukuran
+    else:
+        pnl_mentah = (harga_masuk - harga_keluar) * ukuran
+
+    # Sesuaikan pengali jika instrumennya adalah Saham Indonesia (1 Lot = 100 lembar)
+    # Anda bisa memodifikasi logika ini nanti jika diperlukan
+    net_pnl = pnl_mentah
+
+    # --- PENGUNCIAN STRUKTUR DATA BARU (new_row) ---
+    new_row = pd.DataFrame([{
+        'Tanggal': str(tanggal),
+        'Jam_Entry': str(jam_entry),
+        'Aset / Broker': broker if broker else "General Broker",
+        'Simbol': simbol,
+        'Tipe': tipe,
+        'Harga Masuk': float(harga_masuk),
+        'Harga Keluar': float(harga_keluar),
+        'Rencana_SL': float(r_sl) if 'r_sl' in locals() else 0.0,
+        'Rencana_TP': float(r_tp) if 'r_tp' in locals() else 0.0,
+        'Ukuran': float(ukuran),
+        'Net PnL': float(net_pnl),
+        'Emosi_Pilihan_Manual': emosi if 'emosi' in locals() else "Disiplin Plan",
+        'Deteksi_Otomatis_Sistem': "Calculated",
+        'Audit_Komparasi': "Match",
+        'Status': "Closed" if harga_keluar > 0 else "Open"
+    }])
