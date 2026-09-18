@@ -183,14 +183,14 @@ if not df_active.empty:
         
     st.subheader("📜 Buku Riwayat Log Jurnal & Pengeditan Data")
     
-    # Memastikan memori tipe data angka bersih dari null
-    df_editor_ready = df_active.copy()
+    # FORMAT MATEMATIKA AMAN (100% BEBAS DARI ERROR KOTAK HITAM)
+    # Mengonversi seluruh angka ribuan menjadi string dengan format koma internasional sebelum masuk ke tabel
+    df_visual = df_active.copy()
     for col in ['Harga Masuk', 'Harga Keluar', 'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL']:
-        df_editor_ready[col] = pd.to_numeric(df_editor_ready[col], errors='coerce').fillna(0.0)
+        df_visual[col] = df_visual[col].apply(lambda x: f"{x:,.2f}" if isinstance(x, (int, float)) else x)
     
-    # ✨ RE-STRUKTUR TOTAL (100% AMAN): Menyusun konfigurasi kolom secara horizontal agar bebas dari jebakan SyntaxError
-    konfig_kolom = {
-        "Harga Masuk": st.column_config.NumberColumn(format="%,.2f"),
-        "Harga Keluar": st.column_config.NumberColumn(format="%,.2f"),
-        "Rencana_SL": st.column_config.NumberColumn(format="%,.2f"),
-        "Rencana_TP": st.column_config.NumberColumn(format="%,.2f"),
+    # Memanggil tabel data editor murni yang super ringan dan stabil
+    edited_df = st.data_editor(df_visual, num_rows="dynamic", use_container_width=True, key="jurnal_editor")
+    
+    # Mengembalikan format teks string kembali menjadi angka murni agar memori penyimpanan internal tidak error saat disave
+    df_save = edited_df.copy()
