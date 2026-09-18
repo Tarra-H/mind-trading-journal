@@ -53,21 +53,21 @@ def login():
     st.header("✨ Cuplikan Fitur & Tampilan Dalam Aplikasi (Preview)")
     st.markdown("Berikut adalah simulasi bagaimana sistem mengolah data trading dan mendeteksi kondisi psikologis Anda secara otomatis:")
     
-    # 1. Contoh Grafik Kurva Pertumbuhan (DATA SUDAH DIISI LENGKAP)
+    # 1. Contoh Grafik Kurva Pertumbuhan
     st.subheader("📈 Contoh Grafik Akumulasi Keuntungan (Equity Curve)")
     data_demo = pd.DataFrame({
         'Hari': ['Hari 1', 'Hari 2', 'Hari 3', 'Hari 4', 'Hari 5', 'Hari 6', 'Hari 7'],
-        'Profit Kumulatif': [0, 150000, 100000, 450000, 350000, 700000, 950000]
+        'Profit Kumulatif': [0, 150000, 100000, 450000, 300000, 750000, 900000]
     })
     st.line_chart(data_demo, x='Hari', y='Profit Kumulatif', use_container_width=True)
     
-    # 2. Contoh Grafik Emosi (DATA SUDAH DIISI LENGKAP)
+    # 2. Contoh Grafik Emosi
     col_demo1, col_demo2 = st.columns(2)
     with col_demo1:
         st.markdown("**📊 Deteksi Gangguan Psikologi Terbanyak:**")
         data_emosi_demo = pd.DataFrame({
             'Kondisi': ["Disiplin Plan", "FOMO", "Revenge Trading"],
-            'Jumlah': [12, 4, 2]
+            'Jumlah': [5, 2, 1]
         })
         st.bar_chart(data_emosi_demo, x='Kondisi', y='Jumlah', use_container_width=True)
     with col_demo2:
@@ -104,11 +104,11 @@ st.markdown("---")
 
 # SIDEBAR: MONEY MANAGEMENT & KALKULATOR LOT
 st.sidebar.header("🛡️ Proteksi Risiko & Uang")
-modal_ididr = st.sidebar.number_input("Modal Saham Aktif (IDR)", min_value=0.0, value=10000000.0, step=1000000.0)
+modal_idr = st.sidebar.number_input("Modal Saham Aktif (IDR)", min_value=0.0, value=10000000.0, step=1000000.0)
 modal_usd = st.sidebar.number_input("Modal Forex Aktif (USD)", min_value=0.0, value=1000.0, step=100.0)
 persen_risiko = st.sidebar.slider("Batas Risiko Maksimal per Trade (%)", min_value=0.5, max_value=5.0, value=1.0, step=0.5)
 
-max_risk_idr = modal_ididr * (persen_risiko / 100)
+max_risk_idr = modal_idr * (persen_risiko / 100)
 max_risk_usd = modal_usd * (persen_risiko / 100)
 st.sidebar.info(f"💡 **Batas Toleransi Los Maksimal:**\n* Saham: Rp {max_risk_idr:,.0f}\n* Forex: ${max_risk_usd:,.2f}")
 
