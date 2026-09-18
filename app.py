@@ -24,8 +24,9 @@ if 'jurnal_guest' not in st.session_state:
         'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
     ])
 
+# 📌 HALAMAN DEPAN DENGAN PREVIEW/TEASER UNTUK PUBLIK
 def login():
-    st.title("🔒 Mind Trading Journal - Gateway")
+    st.title("🔒 Nata Mind Trading Journal - Gateway")
     st.markdown("Selamat datang! Silakan login sebagai Pemilik untuk mengisi data riwayat, atau gunakan Akun Tamu untuk mencoba fitur simulasi sampel.")
     
     username = st.text_input("Username")
@@ -34,22 +35,45 @@ def login():
     col_l1, col_l2 = st.columns(2)
     with col_l1:
         if st.button("🚀 Log In Pemilik (Admin)", use_container_width=True):
-            # SILAKAN GANTI USERNAME DAN PASSWORD ANDA DI SINI
             if username == "trader123" and password == "rahasia2026":
                 st.session_state.authenticated = True
                 st.session_state.user_role = "Admin"
-                st.success("Akses Pemilik Diterima! Memuat database utama...")
+                st.success("Akses Pemilik Diterima!")
                 st.rerun()
             else:
                 st.error("Username atau Password Admin salah!")
                 
     with col_l2:
-        if st.button("👥 Masuk Sebagai Tamu (Coba Sampel)", use_container_width=True):
+        if st.button("👥 Masuk Sebagai Tamu (Coba Sandbox)", use_container_width=True):
             st.session_state.authenticated = True
             st.session_state.user_role = "Guest"
             st.rerun()
 
-# Jika belum login, stop aplikasi dan tampilkan halaman login saja
+    # --- ✨ BAGIAN BARU: SCREENSHOT / PREVIEW BENTUK DALAM JURNAL UNTUK MENARIK MINAT PUBLIK ---
+    st.markdown("---")
+    st.header("✨ Cuplikan Fitur & Tampilan Dalam Aplikasi (Preview)")
+    st.markdown("Berikut adalah simulasi bagaimana sistem mengolah data trading dan mendeteksi kondisi psikologis Anda secara otomatis:")
+    
+    # 1. Contoh Grafik Kurva Pertumbuhan
+    st.subheader("📈 Contoh Grafik Akumulasi Keuntungan (Equity Curve)")
+    data_demo = pd.DataFrame({
+        'Hari': ['Hari 1', 'Hari 2', 'Hari 3', 'Hari 4', 'Hari 5', 'Hari 6', 'Hari 7'],
+        'Profit Kumulatif (Rp)': [0, 450000, 200000, 950000, 1500000, 1100000, 2300000]
+    })
+    st.line_chart(data_demo, x='Hari', y='Profit Kumulatif (Rp)', use_container_width=True)
+    
+    # 2. Contoh Grafik Emosi
+    col_demo1, col_demo2 = st.columns(2)
+    with col_demo1:
+        st.markdown("**📊 Deteksi Gangguan Psikologi Terbanyak:**")
+        emosi_demo = pd.Series([12, 4, 2], index=["Disiplin Plan", "FOMO / Terburu-buru", "🚨 Revenge Trading"])
+        st.bar_chart(emosi_demo)
+    with col_demo2:
+        st.markdown("**🛡️ Contoh Rapor Evaluasi Coach AI:**")
+        st.error("🔴 **Deteksi Sistem:** Anda terdeteksi melakukan Revenge Trading sebanyak 2 kali minggu ini. Tindakan emosional ini memotong performa profit bersih Anda sebesar 35%.")
+        st.success("🍏 **Sisi Positif:** Strategi Swing Saham Stockbit Anda berjalan 100% disiplin sesuai Trading Plan.")
+
+# Jika belum login, stop aplikasi dan tampilkan halaman login + preview
 if not st.session_state.authenticated:
     login()
     st.stop()
@@ -116,10 +140,10 @@ with st.form("form_dual_mode", clear_on_submit=True):
         if "Exness" in broker:
             pnl = (harga_keluar - harga_masuk) * ukuran * 100 * multiplier if "XAU" in simbol else (harga_keluar - harga_masuk) * ukuran * 100000 * multiplier
         else:
+            pnl = (harga_keluar - harga_masuk) * Pattern * multiplier
             pnl = (harga_keluar - harga_masuk) * ukuran * multiplier
             
         status = "WIN" if pnl > 0 else "LOSS" if pnl < 0 else "BREAKEVEN"
-        
         deteksi_otomatis = "Belum Terbaca (Butuh Data Presisi)"
         
         if jam_entry != datetime.time(0, 0):
@@ -166,28 +190,3 @@ st.markdown("---")
 st.header("📊 Dashboard Analisis & Komparasi Emosi Trading")
 
 if not df_active.empty:
-    st.subheader("📈 Kurva Pertumbuhan Modal Kumulatif (Equity Curve)")
-    df_grafik = df_active.copy()
-    df_grafik['Kumulatif PnL'] = df_grafik['Net PnL'].cumsum()
-    st.line_chart(df_grafik, x='Tanggal', y='Kumulatif PnL', use_container_width=True)
-    
-    st.markdown("### 🔍 Komparasi Visual: Pilihan Manual Anda vs Deteksi Otomatis Robot")
-    col_chart1, col_chart2 = st.columns(2)
-    with col_chart1:
-        st.markdown("**1. Distribusi Emosi / Strategi Pilihan Manual Anda (Aktif):**")
-        st.bar_chart(df_active['Emosi_Pilihan_Manual'].value_counts())
-    with col_chart2:
-        st.markdown("**2. Hasil Audit Tingkat Kesadaran Mental (Komparasi):**")
-        st.bar_chart(df_active['Audit_Komparasi'].value_counts())
-        
-    st.subheader("📜 Buku Riwayat Log Jurnal & Audit Gabungan")
-    st.dataframe(df_active[['Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi']], use_container_width=True)
-    
-    st.markdown("---")
-    
-    # MODIFIKASI VERTIKAL SEDERHANA: DIJAMIN 100% BEBAS ERROR SPASI PYTHON
-    csv_data = df_active.to_csv(index=False).encode('utf-8')
-    st.download_button(label="📥 Download Backup Data Jurnal ke Excel/CSV", data=csv_data, file_name="trading_journal_export.csv", mime="text/csv", use_container_width=True)
-    
-    st.markdown(" ") # Jarak pemisah antar tombol
-    
