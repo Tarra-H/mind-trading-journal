@@ -48,7 +48,7 @@ def login():
             st.session_state.user_role = "Guest"
             st.rerun()
 
-    # --- ✨ BAGIAN PREVIEW FITUR UNTUK PUBLIK ---
+    # --- ✨ BAGIAN CUPLIKAN PREVIEW FITUR ---
     st.markdown("---")
     st.header("✨ Fitur Unggulan Nata Mind Trading Journal")
     st.markdown("Sistem asisten pintar ini dirancang untuk mendeteksi kesehatan psikologi dan performa trading Anda secara otomatis:")
@@ -113,7 +113,7 @@ with st.form("form_dual_mode", clear_on_submit=True):
         
         if broker_pilih == "Lainnya (Ketik Manual)...":
             broker = st.text_input("Ketik Nama Broker Anda (Contoh: Indo Premier IDR, Binance USD)").strip()
-            st.caption("ℹ *Ketik nama broker Anda bebas. Berikan imbuhan 'IDR' atau 'USD' di ujung nama agar rumus mata uang berfungsi otomatis.*")
+            st.caption("ℹ️ *Ketik nama broker Anda bebas. Berikan imbuhan 'IDR' atau 'USD' di ujung nama agar rumus mata uang berfungsi otomatis.*")
         else:
             broker = broker_pilih
             st.caption("💡 *Jika broker Anda tidak ada di pilihan drop-down di atas, silakan klik opsi paling bawah 'Lainnya (Ketik Manual)...' untuk menulis mandiri.*")
@@ -121,10 +121,10 @@ with st.form("form_dual_mode", clear_on_submit=True):
     with col2:
         simbol = st.text_input("Simbol / Kode Aset (Misal: BBRI / AAPL / XAUUSD)").upper()
         tipe = st.selectbox("Arah Posisi", ["BUY", "SELL"])
-        # Mengubah format ukuran menjadi float fleksibel agar tampilan bersih
+        # FORMAT BARU: Menggunakan float fleksibel agar tampilan desimal clean dan tidak kaku
         ukuran = st.number_input("Jumlah Ukuran (Lot / Lembar Saham)", min_value=0.0, step=1.0, format="%f", value=0.0)
     with col3:
-        # FORMAT BARU: Menggunakan "%f" fleksibel tanpa paksaan 5 angka nol di belakang koma untuk tampilan clean
+        # FORMAT BARU: Bebas dari gangguan rentetan angka nol bawaan desimal kaku yang kotor
         harga_masuk = st.number_input("Harga Masuk (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
         harga_keluar = st.number_input("Harga Keluar (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
         r_sl = st.number_input("Rencana Stop Loss (Isi 0 jika tidak ada plan)", min_value=0.0, step=1.0, format="%f", value=0.0)
