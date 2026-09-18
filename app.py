@@ -121,7 +121,7 @@ with st.form("form_dual_mode", clear_on_submit=True):
     with col2:
         simbol = st.text_input("Simbol / Kode Aset (Misal: BBRI / AAPL / XAUUSD)").upper()
         tipe = st.selectbox("Arah Posisi", ["BUY", "SELL"])
-        # FORMAT CLEAN DESIMAL: Menggunakan format float fleksibel
+        # FORMAT CLEAN DESIMAL: Menggunakan format float fleksibel %f
         ukuran = st.number_input("Jumlah Ukuran (Lot / Lembar Saham)", min_value=0.0, step=1.0, format="%f", value=0.0)
     with col3:
         # FORMAT CLEAN DESIMAL: Menghapus angka nol berlebih agar tampilan bersih di mata pelanggan VIP
