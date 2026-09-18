@@ -145,28 +145,40 @@ with st.form("form_dual_mode", clear_on_submit=True):
         elif "IDR" in broker.upper() or "STOCKBIT" in broker.upper() or "AJAIB" in broker.upper():
             pnl = (harga_keluar - harga_masuk) * (ukuran * 100) * multiplier
         else:
-            pnl = (harga_keluar - harga_masuk) * ukuran * multiplier
-            
-        status = "WIN" if pnl > 0 else "LOSS" if pnl < 0 else "BREAKEVEN"
-        deteksi_otomatis = "Disiplin Plan"
-                r_sl = st.number_input("Rencana Stop Loss (Isi 0 jika tidak ada plan)", min_value=0.0, step=1.0, format="%f", value=0.0)
-        r_tp = st.number_input("Rencana Take Profit (Isi 0 jika tidak ada plan)", min_value=0.0, step=1.0, format="%f", value=0.0)
+            harga_keluar = st.number_input("Harga Keluar (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
+            r_sl = st.number_input("Rencana Stop Loss (Isi 0 jika tidak ada plan)", min_value=0.0, step=1.0, format="%f", value=0.0)
+            r_tp = st.number_input("Rencana Take Profit (Isi 0 jika tidak ada plan)", min_value=0.0, step=1.0, format="%f", value=0.0)
 
     st.markdown(" ")
     emosi = st.selectbox("🧠 Apa strategi atau emosi yang Anda rasakan saat membuka posisi ini?", ["Disiplin Plan", "FOMO (Fear of Missing Out)", "Balas Dendam (Revenge Trading)", "Fear / Takut", "Greed / Serakah"])
     
-    # Tombol submit khusus untuk di dalam komponen st.form
+    # Tombol untuk memicu penyimpanan data di dalam form
     submit_button = st.form_submit_button("➕ Simpan & Jalankan Audit Sistem", type="primary")
 
 # --- PROSES SIMPAN DATA KETIKA TOMBOL DIKLIK ---
 if submit_button:
-    # 1. Hitung Net PnL otomatis
+    # 1. Hitung Net PnL otomatis berdasarkan arah posisi (Tipe)
     if tipe == "BUY":
         net_pnl = (harga_keluar - harga_masuk) * ukuran
     else:
         net_pnl = (harga_masuk - harga_keluar) * ukuran
         
-    # 2. Buat baris data baru dengan kolom yang sesuai database
+    # 2. Tentukan Status Transaksi secara otomatis
+    if net_pnl > 0:
+        status_aktif = "WIN"
+    elif net_pnl < 0:
+        status_aktif = "LOSS"
+    else:
+        status_aktif = "BREAKEVEN"
+
+    # 3. Logika Audit Deteksi Emosi Otomatis
+    deteksi_otomatis = "Disiplin Plan"
+    if emosi != "Disiplin Plan":
+        audit_komparasi = f"⚠️ Emosi Terdeteksi: {emosi}"
+    else:
+        audit_komparasi = "✅ Sesuai Trading Plan"
+
+    # 4. Buat baris data baru dengan struktur tabel database lengkap
     new_row = pd.DataFrame([{
         'Tanggal': str(tanggal),
         'Jam_Entry': str(jam_entry),
@@ -180,12 +192,12 @@ if submit_button:
         'Ukuran': float(ukuran),
         'Net PnL': float(net_pnl),
         'Emosi_Pilihan_Manual': emosi,
-        'Deteksi_Otomatis_Sistem': "Calculated",
-        'Audit_Komparasi': "Match",
-        'Status': "Closed" if harga_keluar > 0 else "Open"
+        'Deteksi_Otomatis_Sistem': deteksi_otomatis,
+        'Audit_Komparasi': audit_komparasi,
+        'Status': status_aktif
     }])
     
-    # 3. Gabungkan ke data yang sudah ada
+    # 5. Gabungkan ke data yang sudah ada (Database)
     if st.session_state.user_role == "Admin":
         df_gsheets = pd.concat([df_gsheets, new_row], ignore_index=True)
         try:
@@ -199,20 +211,21 @@ if submit_button:
         st.success("⚡ Data masuk ke Sandbox Tamu (Sesi Sementara)!")
     st.rerun()
 
-# --- 📊 BAGIAN DASHBOARD GRAFIK KINERJA (EQUITY CURVE) ---
+# --- 📊 BAGIAN DASHBOARD GRAFIK KINERJA ---
 st.header("📊 Analisis Performa & Grafik Modal")
 
 if not df_active.empty and 'Net PnL' in df_active.columns:
-    # Memastikan data Net PnL terbaca sebagai angka bersihan
+    # Memastikan data Net PnL terbaca sebagai angka
     df_active['Net PnL'] = pd.to_numeric(df_active['Net PnL'], errors='coerce').fillna(0)
     
     # Menghitung akumulasi kurva modal
     df_active['Kumulatif_Profit'] = df_active['Net PnL'].cumsum()
     
-    # Menampilkan visualisasi grafik garis di web streamlit
+    # Menampilkan visualisasi grafik garis di web Streamlit
     st.line_chart(df_active, x='Tanggal', y='Kumulatif_Profit', use_container_width=True)
     
     # Tampilkan rangkuman tabel data di bawahnya
     st.dataframe(df_active, use_container_width=True)
 else:
     st.info("ℹ️ Belum ada data transaksi yang tersimpan. Grafik kurva pertumbuhan modal akan muncul di sini setelah Anda memasukkan data pertama.")
+        
