@@ -48,34 +48,20 @@ def login():
             st.session_state.user_role = "Guest"
             st.rerun()
 
-    # --- ✨ BAGIAN PREVIEW FITUR UNTUK PUBLIK ---
+    # --- ✨ BAGIAN CUPLIKAN PREVIEW FITUR (FORMAT AMAN TANPA GRAFIK ERROR) ---
     st.markdown("---")
-    st.header("✨ Cuplikan Fitur & Tampilan Dalam Aplikasi (Preview)")
-    st.markdown("Berikut adalah simulasi bagaimana sistem mengolah data trading dan mendeteksi kondisi psikologis Anda secara otomatis:")
+    st.header("✨ Fitur Unggulan Nata Mind Trading Journal")
+    st.markdown("Sistem asisten pintar ini dirancang untuk mendeteksi kesehatan psikologi dan performa trading Anda secara otomatis:")
     
-    # 1. Contoh Grafik Kurva Pertumbuhan (ANGKA SUDAH DIISI LENGKAP)
-    st.subheader("📈 Contoh Grafik Akumulasi Keuntungan (Equity Curve)")
-    data_demo = pd.DataFrame({
-        'Hari': ['Hari 1', 'Hari 2', 'Hari 3', 'Hari 4', 'Hari 5', 'Hari 6', 'Hari 7'],
-        'Profit Kumulatif': [0, 500000, 1200000, 900000, 2300000, 3100000, 4500000]
-    })
-    st.line_chart(data_demo, x='Hari', y='Profit Kumulatif', use_container_width=True)
-    
-    # 2. Contoh Grafik Emosi (ANGKA SUDAH DIISI LENGKAP)
-    col_demo1, col_demo2 = st.columns(2)
-    with col_demo1:
-        st.markdown("**📊 Deteksi Gangguan Psikologi Terbanyak:**")
-        data_emosi_demo = pd.DataFrame({
-            'Kondisi': ["Disiplin Plan", "FOMO", "Revenge Trading"],
-            'Jumlah': [12, 5, 3]
-        })
-        st.bar_chart(data_emosi_demo, x='Kondisi', y='Jumlah', use_container_width=True)
-    with col_demo2:
-        st.markdown("**🛡️ Contoh Rapor Evaluasi Coach AI:**")
-        st.error("🔴 Deteksi Sistem: Anda terdeteksi melakukan Revenge Trading sebanyak 2 kali minggu ini. Tindakan emosional ini memotong performa profit bersih Anda sebesar 35%.")
-        st.success("🍏 Sisi Positif: Strategi Swing Saham Anda berjalan 100% disiplin sesuai Trading Plan.")
+    col_f1, col_f2, col_f3 = st.columns(3)
+    with col_f1:
+        st.info("📈 **Kurva Akumulasi Profit**\n\nMemetakan grafik pertumbuhan modal (Equity Curve) secara real-time dari gabungan portofolio saham maupun forex Anda.")
+    with col_f2:
+        st.warning("🧠 **Audit Psikologi Otomatis**\n\nMendeteksi dan membandingkan emosi manual Anda dengan matematika pasar untuk menangkap gejala FOMO atau Revenge Trading.")
+    with col_f3:
+        st.success("🛡️ **Manajemen Risiko Terunci**\n\nKalkulator Lot otomatis terintegrasi di dalam sistem berdasarkan batas toleransi kerugian modal Anda.")
 
-# Jika belum login, stop aplikasi dan tampilkan halaman login + preview
+# Jika belum login, stop aplikasi dan tampilkan halaman login + preview info
 if not st.session_state.authenticated:
     login()
     st.stop()
@@ -121,7 +107,7 @@ with st.form("form_dual_mode", clear_on_submit=True):
         tanggal = st.date_input("Tanggal Transaksi", value=datetime.date.today())
         jam_entry = st.time_input("Jam Masuk Posisi (Isi seadanya jika malas/ribet)", value=datetime.time(0, 0))
         
-        # OPSI COMBOBOX PREMIUM
+        # OPSI COMBOBOX PREMIUM UNIVERSAL
         pilihan_broker_standar = ["Stockbit IDR", "Ajaib IDR", "Gotrade USD", "Exness USD", "XM Forex USD", "Lainnya (Ketik Manual)..."]
         broker_pilih = st.selectbox("Platform / Broker", pilihan_broker_standar)
         
@@ -185,3 +171,15 @@ with st.form("form_dual_mode", clear_on_submit=True):
             'Tanggal': tanggal, 'Jam_Entry': jam_entry, 'Aset / Broker': broker if broker else "General Broker", 'Simbol': simbol, 
             'Tipe': tipe, 'Harga Masuk': harga_masuk, 'Harga Keluar': harga_keluar, 'Rencana_SL': r_sl, 
             'Rencana_TP': r_tp, 'Ukuran': ukuran, 'Net PnL': pnl, 'Emosi_Pilihan_Manual': emosi_manual, 
+            'Deteksi_Otomatis_Sistem': deteksi_otomatis, 'Audit_Komparasi': audit_komparasi, 'Status': status
+        }
+        
+        if st.session_state.user_role == "Admin":
+            st.session_state.jurnal_admin = pd.concat([st.session_state.jurnal_admin, pd.DataFrame([new_row])], ignore_index=True)
+            df_active = st.session_state.jurnal_admin
+        else:
+            st.session_state.jurnal_guest = pd.concat([st.session_state.jurnal_guest, pd.DataFrame([new_row])], ignore_index=True)
+            df_active = st.session_state.jurnal_guest
+            
+        st.success(f"Transaksi {simbol} berhasil disimpan!")
+
