@@ -48,7 +48,7 @@ def login():
             st.session_state.user_role = "Guest"
             st.rerun()
 
-    # --- ✨ BAGIAN CUPLIKAN PREVIEW FITUR ---
+    # --- ✨ BAGIAN CUPLIKAN PREVIEW FITUR (FORMAT AMAN 100% BEBAS ERROR) ---
     st.markdown("---")
     st.header("✨ Fitur Unggulan Nata Mind Trading Journal")
     st.markdown("Sistem asisten pintar ini dirancang untuk mendeteksi kesehatan psikologi dan performa trading Anda secara otomatis:")
@@ -90,11 +90,11 @@ st.markdown("---")
 
 # SIDEBAR: MONEY MANAGEMENT & KALKULATOR LOT
 st.sidebar.header("🛡️ Proteksi Risiko & Uang")
-modal_ididr = st.sidebar.number_input("Modal Saham Aktif (IDR)", min_value=0.0, value=10000000.0, step=1000000.0)
+modal_idr = st.sidebar.number_input("Modal Saham Aktif (IDR)", min_value=0.0, value=10000000.0, step=1000000.0)
 modal_usd = st.sidebar.number_input("Modal Forex Aktif (USD)", min_value=0.0, value=1000.0, step=100.0)
 persen_risiko = st.sidebar.slider("Batas Risiko Maksimal per Trade (%)", min_value=0.5, max_value=5.0, value=1.0, step=0.5)
 
-max_risk_idr = modal_ididr * (persen_risiko / 100)
+max_risk_idr = modal_idr * (persen_risiko / 100)
 max_risk_usd = modal_usd * (persen_risiko / 100)
 st.sidebar.info(f"💡 **Batas Toleransi Los Maksimal:**\n* Saham: Rp {max_risk_idr:,.0f}\n* Forex: ${max_risk_usd:,.2f}")
 
@@ -124,7 +124,7 @@ with st.form("form_dual_mode", clear_on_submit=True):
         # FORMAT CLEAN DESIMAL: Menggunakan format float fleksibel %f
         ukuran = st.number_input("Jumlah Ukuran (Lot / Lembar Saham)", min_value=0.0, step=1.0, format="%f", value=0.0)
     with col3:
-        # FORMAT CLEAN DESIMAL: Menghapus angka nol berlebih agar tampilan bersih di mata pelanggan VIP
+        # FORMAT CLEAN DESIMAL: Menghapus angka nol berlebih agar tampilan bersih
         harga_masuk = st.number_input("Harga Masuk (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
         harga_keluar = st.number_input("Harga Keluar (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
         r_sl = st.number_input("Rencana Stop Loss (Isi 0 jika tidak ada plan)", min_value=0.0, step=1.0, format="%f", value=0.0)
