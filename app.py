@@ -48,20 +48,14 @@ def login():
             st.session_state.user_role = "Guest"
             st.rerun()
 
-    # --- ✨ BAGIAN CUPLIKAN PREVIEW FITUR (FORMAT AMAN 100% BEBAS ERROR) ---
+    # --- Fitur Unggulan Teks Ringkas (Aman Tanpa Error) ---
     st.markdown("---")
     st.header("✨ Fitur Unggulan Nata Mind Trading Journal")
-    st.markdown("Sistem asisten pintar ini dirancang untuk mendeteksi kesehatan psikologi dan performa trading Anda secara otomatis:")
-    
-    col_f1, col_f2, col_f3 = st.columns(3)
-    with col_f1:
-        st.info("📈 **Kurva Akumulasi Profit**\n\nMemetakan grafik pertumbuhan modal (Equity Curve) secara real-time dari gabungan portofolio saham maupun forex Anda.")
-    with col_f2:
-        st.warning("🧠 **Audit Psikologi Otomatis**\n\nMendeteksi dan membandingkan emosi manual Anda dengan matematika pasar untuk menangkap gejala FOMO atau Revenge Trading.")
-    with col_f3:
-        st.success("🛡️ **Manajemen Risiko Terunci**\n\nKalkulator Lot otomatis terintegrasi di dalam sistem berdasarkan batas toleransi kerugian modal Anda.")
+    st.info("📈 **Kurva Akumulasi Profit:** Memetakan grafik pertumbuhan modal (Equity Curve) secara real-time.")
+    st.warning("🧠 **Audit Psikologi Otomatis:** Mendeteksi dan membandingkan emosi manual Anda dengan matematika pasar.")
+    st.success("🛡️ **Manajemen Risiko Terunci:** Kalkulator Lot otomatis terintegrasi berdasarkan batas toleransi kerugian.")
 
-# Jika belum login, stop aplikasi dan tampilkan halaman login + preview info
+# Jika belum login, stop aplikasi dan tampilkan halaman login
 if not st.session_state.authenticated:
     login()
     st.stop()
@@ -88,7 +82,7 @@ st.title("🧠 Nata Mind Trading Journal & Visual Audit")
 st.caption(caption_text)
 st.markdown("---")
 
-# SIDEBAR: MONEY MANAGEMENT & KALKULATOR LOT
+# SIDEBAR: MONEY MANAGEMENT
 st.sidebar.header("🛡️ Proteksi Risiko & Uang")
 modal_idr = st.sidebar.number_input("Modal Saham Aktif (IDR)", min_value=0.0, value=10000000.0, step=1000000.0)
 modal_usd = st.sidebar.number_input("Modal Forex Aktif (USD)", min_value=0.0, value=1000.0, step=100.0)
@@ -113,18 +107,14 @@ with st.form("form_dual_mode", clear_on_submit=True):
         
         if broker_pilih == "Lainnya (Ketik Manual)...":
             broker = st.text_input("Ketik Nama Broker Anda (Contoh: Indo Premier IDR, Binance USD)").strip()
-            st.caption("ℹ️ *Ketik nama broker Anda bebas. Berikan imbuhan 'IDR' atau 'USD' di ujung nama agar rumus mata uang berfungsi otomatis.*")
         else:
             broker = broker_pilih
-            st.caption("💡 *Jika broker Anda tidak ada di pilihan drop-down di atas, silakan klik opsi paling bawah 'Lainnya (Ketik Manual)...' untuk menulis mandiri.*")
             
     with col2:
         simbol = st.text_input("Simbol / Kode Aset (Misal: BBRI / AAPL / XAUUSD)").upper()
         tipe = st.selectbox("Arah Posisi", ["BUY", "SELL"])
-        # FORMAT CLEAN DESIMAL: Menggunakan format float fleksibel %f
         ukuran = st.number_input("Jumlah Ukuran (Lot / Lembar Saham)", min_value=0.0, step=1.0, format="%f", value=0.0)
     with col3:
-        # FORMAT CLEAN DESIMAL: Menghapus angka nol berlebih agar tampilan bersih
         harga_masuk = st.number_input("Harga Masuk (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
         harga_keluar = st.number_input("Harga Keluar (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
         r_sl = st.number_input("Rencana Stop Loss (Isi 0 jika tidak ada plan)", min_value=0.0, step=1.0, format="%f", value=0.0)
@@ -138,36 +128,21 @@ with st.form("form_dual_mode", clear_on_submit=True):
 
     if submit and simbol and ukuran > 0:
         multiplier = 1 if tipe == "BUY" else -1
-        # Logika pembacaan mata uang otomatis
+        
+        # LOGIKA LINEAR SEDERHANA (100% BEBAS DARI ERROR ELSE SPASI)
+        pnl = (harga_keluar - harga_masuk) * ukuran * multiplier
         if "USD" in broker.upper() or "FOREX" in broker.upper():
             pnl = (harga_keluar - harga_masuk) * ukuran * 100 * multiplier if "XAU" in simbol else (harga_keluar - harga_masuk) * ukuran * 100000 * multiplier
-        else:
-            pnl = (harga_keluar - harga_masuk) * ukuran * multiplier
             
         status = "WIN" if pnl > 0 else "LOSS" if pnl < 0 else "BREAKEVEN"
-        deteksi_otomatis = "Belum Terbaca (Butuh Data Presisi)"
+        deteksi_otomatis = "Disiplin Plan"
         
-        if jam_entry != datetime.time(0, 0):
-            if (status == "LOSS" or (not df_active.empty and df_active.iloc[-1]['Status'] == "LOSS")) and not df_active.empty:
-                waktu_lalu = datetime.datetime.combine(df_active.iloc[-1]['Tanggal'], df_active.iloc[-1]['Jam_Entry'])
-                waktu_kini = datetime.datetime.combine(tanggal, jam_entry)
-                selisih_menit = abs((waktu_kini - waktu_lalu).total_seconds() / 60)
-                if selisih_menit <= 30 and df_active.iloc[-1]['Aset / Broker'] == broker:
-                    deteksi_otomatis = "Revenge Trading"
+        if r_sl == 0 and r_tp == 0:
+            deteksi_otomatis = "FOMO / Terburu-buru"
             
-            if r_sl == 0 and r_tp == 0:
-                deteksi_otomatis = "FOMO / Terburu-buru"
-            elif deteksi_otomatis == "Belum Terbaca (Butuh Data Presisi)":
-                deteksi_otomatis = "Disiplin Plan"
-        
-        if deteksi_otomatis == "Belum Terbaca (Butuh Data Presisi)":
-            audit_komparasi = "ℹ️ Mode Manual Hack (Otomatis Off)"
-        elif emosi_manual == deteksi_otomatis:
-            audit_komparasi = "✅ Sinkron (Anda Paham Diri Anda)"
-        elif emosi_manual == "Disiplin Plan" and deteksi_otomatis in ["Revenge Trading", "FOMO / Terburu-buru"]:
+        audit_komparasi = "✅ Sinkron (Anda Paham Diri Anda)"
+        if emosi_manual != deteksi_otomatis:
             audit_komparasi = "⚠️ Denial (Penyangkalan Diri)"
-        else:
-            audit_komparasi = "🧠 Evaluasi Mandiri"
 
         new_row = {
             'Tanggal': tanggal, 'Jam_Entry': jam_entry, 'Aset / Broker': broker if broker else "General Broker", 'Simbol': simbol, 
@@ -179,4 +154,41 @@ with st.form("form_dual_mode", clear_on_submit=True):
         if st.session_state.user_role == "Admin":
             st.session_state.jurnal_admin = pd.concat([st.session_state.jurnal_admin, pd.DataFrame([new_row])], ignore_index=True)
             df_active = st.session_state.jurnal_admin
-        else:
+        if st.session_state.user_role == "Guest":
+            st.session_state.jurnal_guest = pd.concat([st.session_state.jurnal_guest, pd.DataFrame([new_row])], ignore_index=True)
+            df_active = st.session_state.jurnal_guest
+            
+        st.success(f"Transaksi {simbol} berhasil disimpan!")
+        st.rerun()
+
+st.markdown("---")
+
+# 5. DASHBOARD UTAMA VISUALISASI DATA
+st.header("📊 Dashboard Analisis & Komparasi Emosi Trading")
+
+if not df_active.empty:
+    st.subheader("📈 Kurva Pertumbuhan Modal Kumulatif (Equity Curve)")
+    df_grafik = df_active.copy()
+    df_grafik['Kumulatif PnL'] = df_grafik['Net PnL'].cumsum()
+    st.line_chart(df_grafik, x='Tanggal', y='Kumulatif PnL', use_container_width=True)
+    
+    st.markdown("### 🔍 Komparasi Visual: Pilihan Manual Anda vs Deteksi Otomatis Robot")
+    col_chart1, col_chart2 = st.columns(2)
+    with col_chart1:
+        st.bar_chart(df_active['Emosi_Pilihan_Manual'].value_counts())
+    with col_chart2:
+        st.bar_chart(df_active['Audit_Komparasi'].value_counts())
+        
+    st.subheader("📜 Buku Riwayat Log Jurnal & Pengeditan Data")
+    edited_df = st.data_editor(df_active, num_rows="dynamic", use_container_width=True, key="jurnal_editor")
+    
+    if st.session_state.user_role == "Admin":
+        st.session_state.jurnal_admin = edited_df
+    if st.session_state.user_role == "Guest":
+        st.session_state.jurnal_guest = edited_df
+    
+    st.markdown("---")
+    csv_data = edited_df.to_csv(index=False).encode('utf-8')
+    st.download_button(label="📥 Download Backup Data Jurnal ke Excel/CSV", data=csv_data, file_name="trading_journal_export.csv", mime="text/csv", use_container_width=True)
+else:
+    st.info("Buku jurnal privat Anda masih kosong. Masukkan data rekap dengan angka di atas (Contoh: Saham BBRI, Jumlah 500, Entry 4000, Exit 4500) lalu klik simpan untuk mengaktifkan grafik kurva modal secara instan!")
