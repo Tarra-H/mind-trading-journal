@@ -48,7 +48,7 @@ def login():
             st.session_state.user_role = "Guest"
             st.rerun()
 
-    # --- Fitur Unggulan Teks Ringkas ---
+    # --- Fitur Utama Info Depan ---
     st.markdown("---")
     st.header("✨ Fitur Unggulan Nata Mind Trading Journal")
     st.info("📈 **Kurva Akumulasi Profit:** Memetakan grafik pertumbuhan modal (Equity Curve) secara real-time.")
@@ -84,11 +84,11 @@ st.markdown("---")
 
 # SIDEBAR: MONEY MANAGEMENT
 st.sidebar.header("🛡️ Proteksi Risiko & Uang")
-modal_ididr = st.sidebar.number_input("Modal Saham Aktif (IDR)", min_value=0.0, value=10000000.0, step=1000000.0)
+modal_idr = st.sidebar.number_input("Modal Saham Aktif (IDR)", min_value=0.0, value=10000000.0, step=1000000.0)
 modal_usd = st.sidebar.number_input("Modal Forex Aktif (USD)", min_value=0.0, value=1000.0, step=100.0)
 persen_risiko = st.sidebar.slider("Batas Risiko Maksimal per Trade (%)", min_value=0.5, max_value=5.0, value=1.0, step=0.5)
 
-max_risk_idr = modal_ididr * (persen_risiko / 100)
+max_risk_idr = modal_idr * (persen_risiko / 100)
 max_risk_usd = modal_usd * (persen_risiko / 100)
 st.sidebar.info(f"💡 **Batas Toleransi Los Maksimal:**\n* Saham: Rp {max_risk_idr:,.0f}\n* Forex: ${max_risk_usd:,.2f}")
 
@@ -183,17 +183,14 @@ if not df_active.empty:
         
     st.subheader("📜 Buku Riwayat Log Jurnal & Pengeditan Data")
     
-    # Pastikan tipe data kolom angka adalah numerik murni sebelum dirender ke editor
+    # Memastikan memori tipe data angka bersih dari null
     df_editor_ready = df_active.copy()
     for col in ['Harga Masuk', 'Harga Keluar', 'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL']:
         df_editor_ready[col] = pd.to_numeric(df_editor_ready[col], errors='coerce').fillna(0.0)
     
-    # ✨ FIX KURUNG TUTUP: Menambahkan ) di baris penutup column_config agar 100% AMAN
-    edited_df = st.data_editor(
-        df_editor_ready,
-        num_rows="dynamic",
-        use_container_width=True,
-        key="jurnal_editor",
-        column_config={
-            "Harga Masuk": st.column_config.NumberColumn(format="%,.2f"),
-            "Harga Keluar": st.column_config.NumberColumn(format="%,.2f"),
+    # ✨ RE-STRUKTUR TOTAL (100% AMAN): Menyusun konfigurasi kolom secara horizontal agar bebas dari jebakan SyntaxError
+    konfig_kolom = {
+        "Harga Masuk": st.column_config.NumberColumn(format="%,.2f"),
+        "Harga Keluar": st.column_config.NumberColumn(format="%,.2f"),
+        "Rencana_SL": st.column_config.NumberColumn(format="%,.2f"),
+        "Rencana_TP": st.column_config.NumberColumn(format="%,.2f"),
