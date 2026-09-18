@@ -53,21 +53,21 @@ def login():
     st.header("✨ Cuplikan Fitur & Tampilan Dalam Aplikasi (Preview)")
     st.markdown("Berikut adalah simulasi bagaimana sistem mengolah data trading dan mendeteksi kondisi psikologis Anda secara otomatis:")
     
-    # 1. Contoh Grafik Kurva Pertumbuhan
+    # 1. Contoh Grafik Kurva Pertumbuhan (ANGKA SUDAH DIISI LENGKAP)
     st.subheader("📈 Contoh Grafik Akumulasi Keuntungan (Equity Curve)")
     data_demo = pd.DataFrame({
         'Hari': ['Hari 1', 'Hari 2', 'Hari 3', 'Hari 4', 'Hari 5', 'Hari 6', 'Hari 7'],
-        'Profit Kumulatif': [0, 150000, 100000, 450000, 300000, 750000, 900000]
+        'Profit Kumulatif': [0, 500000, 1200000, 900000, 2300000, 3100000, 4500000]
     })
     st.line_chart(data_demo, x='Hari', y='Profit Kumulatif', use_container_width=True)
     
-    # 2. Contoh Grafik Emosi
+    # 2. Contoh Grafik Emosi (ANGKA SUDAH DIISI LENGKAP)
     col_demo1, col_demo2 = st.columns(2)
     with col_demo1:
         st.markdown("**📊 Deteksi Gangguan Psikologi Terbanyak:**")
         data_emosi_demo = pd.DataFrame({
             'Kondisi': ["Disiplin Plan", "FOMO", "Revenge Trading"],
-            'Jumlah': [5, 2, 1]
+            'Jumlah': [12, 5, 3]
         })
         st.bar_chart(data_emosi_demo, x='Kondisi', y='Jumlah', use_container_width=True)
     with col_demo2:
