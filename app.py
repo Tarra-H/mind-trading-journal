@@ -236,6 +236,34 @@ if df_dashboard is not None and not df_dashboard.empty:
     st.markdown("### 📝 Log Riwayat Tabel Jurnal Transaksi")
     st.dataframe(df_dashboard, use_container_width=True)
     
+    # --- 🛠️ FITUR BARU: KOREKSI & HAPUS DATA TRANSAKSI SAHAM ---
+    st.markdown("### 🔧 Panel Koreksi & Hapus Transaksi")
+    with st.expander("👉 Klik di sini untuk menghapus data transaksi yang salah input"):
+        st.warning("Pilih nomor indeks data (angka paling kiri pada tabel di atas) yang ingin Anda hapus secara permanen.")
+        
+        # Pilihan nomor baris berdasarkan data yang ada di tabel
+        opsi_indeks = list(df_dashboard.index)
+        indeks_dipilih = st.selectbox("Pilih Nomor Indeks Baris yang Akan Dihapus:", opsi_indeks)
+        
+        # Tampilkan cuplikan data yang akan dihapus agar trader tidak salah pilih
+        data_target = df_dashboard.loc[indeks_dipilih]
+        st.info(f"📋 **Data Terpilih:** Simbol: {data_target['Simbol']} | Tipe: {data_target['Tipe']} | PnL: Rp {data_target['Net PnL']:,.0f}")
+        
+        # Tombol konfirmasi hapus permanen
+        if st.button("🗑️ Hapus Baris Data Ini Secara Permanen", type="secondary", use_container_width=True):
+            if st.session_state.user_role == "Admin":
+                # Hapus baris data berdasarkan indeks terpilih
+                st.session_state.jurnal_data = st.session_state.jurnal_data.drop(indeks_dipilih).reset_index(drop=True)
+                # Perbarui file database CSV permanen di cloud
+                st.session_state.jurnal_data.to_csv(FILE_DB, index=False)
+                st.success(f"✅ Data indeks {indeks_dipilih} berhasil dihapus permanen dari Database!")
+            else:
+                st.session_state.jurnal_guest_db = st.session_state.jurnal_guest_db.drop(indeks_dipilih).reset_index(drop=True)
+                st.success(f"✅ Data indeks {indeks_dipilih} berhasil dihapus dari Sandbox Tamu!")
+            
+            st.rerun()
+
+    st.markdown("---")
     # 4. Tombol Premium Unduh Ekspor File CSV Khusus Excel Indonesia
     csv_excel = df_dashboard.to_csv(index=False, sep=";")
     st.download_button(
