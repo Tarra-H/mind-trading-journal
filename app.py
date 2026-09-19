@@ -197,8 +197,20 @@ if submit and simbol and ukuran > 0:
         st.success("⚡ Data masuk ke Sandbox Tamu (Sesi Sementara)!")
         
     st.rerun()
-
 # --- 📊 BAGIAN DASHBOARD GRAFIK KINERJA (EQUITY CURVE) ---
 st.header("📊 Analisis Performa & Grafik Modal")
 
 if df_active is not None and not df_active.empty:
+    # Memastikan kolom Net PnL terbaca sebagai angka bersih
+    df_active['Net PnL'] = pd.to_numeric(df_active['Net PnL'], errors='coerce').fillna(0)
+    
+    # Kalkulasi kurva akumulasi profit
+    df_active['Kumulatif_Profit'] = df_active['Net PnL'].cumsum()
+    
+    # Tampilkan grafik garis performa portofolio
+    st.line_chart(df_active, x='Tanggal', y='Kumulatif_Profit', use_container_width=True)
+    
+    # Tampilkan ringkasan tabel data log riwayat di bawahnya
+    st.dataframe(df_active, use_container_width=True)
+else:
+    st.info("ℹ️ Belum ada data transaksi yang tersimpan. Grafik kurva pertumbuhan modal akan muncul di sini setelah Anda memasukkan data pertama.")
