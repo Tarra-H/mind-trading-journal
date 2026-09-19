@@ -12,6 +12,10 @@ if 'authenticated' not in st.session_state:
 if 'user_role' not in st.session_state:
     st.session_state.user_role = None
 
+# Inisialisasi penyimpanan lokal yang aman di memori aplikasi agar data tidak hilang saat rerun
+if 'jurnal_data' not in st.session_state:
+    st.session_state.jurnal_data = None
+
 def login():
     st.title("🔒 Nata Mind Trading Journal - Gateway")
     st.markdown("Selamat datang! Silakan login sebagai Pemilik untuk mengisi data riwayat, atau gunakan Akun Tamu untuk mencoba fitur simulasi sampel.")
@@ -48,32 +52,37 @@ def login():
     with col_f3:
         st.success("🛡️ **Manajemen Risiko Terunci**\n\nKalkulator Lot otomatis terintegrasi di dalam sistem berdasarkan batas toleransi kerugian modal Anda.")
 
-# Jika belum login, stop aplikasi dan tampilkan halaman login + preview info
+# Jika belum login, stop aplikasi dan tampilkan halaman login
 if not st.session_state.authenticated:
     login()
     st.stop()
 
-# --- INSTANSIASI KONEKSI DATABASE PERMANEN (GOOGLE SHEETS) ---
-try:
-    url_spreadsheet = st.secrets["connections"]["gsheets"]["spreadsheet"]
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    df_gsheets = conn.read(spreadsheet=url_spreadsheet, ttl="0d")
-    df_gsheets = df_gsheets.dropna(how="all")
-except Exception as e:
-    df_gsheets = pd.DataFrame(columns=[
-        'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 
-        'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
-    ])
+# --- INSTANSIASI KONEKSI DATABASE PERMANEN ---
+if st.session_state.jurnal_data is None:
+    if st.session_state.user_role == "Admin":
+        try:
+            url_spreadsheet = st.secrets["connections"]["gsheets"]["spreadsheet"]
+            conn = st.connection("gsheets", type=GSheetsConnection)
+            df_load = conn.read(spreadsheet=url_spreadsheet, ttl="0d")
+            st.session_state.jurnal_data = df_load.dropna(how="all")
+        except Exception as e:
+            st.sidebar.error(f"⚠️ Gagal load GSheets, memakai basis data lokal: {e}")
+            st.session_state.jurnal_data = pd.DataFrame(columns=[
+                'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 
+                'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
+            ])
+    else:
+        st.session_state.jurnal_data = pd.DataFrame(columns=[
+            'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 
+            'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
+        ])
 
-# Mode Pemisahan Sesi Berdasarkan Login
+df_active = st.session_state.jurnal_data
+
 if st.session_state.user_role == "Admin":
-    df_active = df_gsheets
     role_text = "🔑 AKUN PEMILIK (ADMIN)"
     caption_text = "Status Keamanan: Akses Penuh. Data tersimpan otomatis di Google Drive GSheets Anda."
 else:
-    if 'jurnal_guest' not in st.session_state:
-        st.session_state.jurnal_guest = df_gsheets.copy()
-    df_active = st.session_state.jurnal_guest
     role_text = "👥 AKUN TAMU (GUEST MODE)"
     caption_text = "Status: Mode Sandbox Sampel. Anda bisa mencoba input, data akan terhapus jika browser di-refresh."
 
@@ -82,6 +91,7 @@ st.sidebar.markdown(f"### Status Sesi:\n**{role_text}**")
 if st.sidebar.button("🔒 Log Out / Kunci Jurnal", type="primary", use_container_width=True):
     st.session_state.authenticated = False
     st.session_state.user_role = None
+    st.session_state.jurnal_data = None
     st.rerun()
 st.sidebar.markdown("---")
 
@@ -136,15 +146,15 @@ with st.form("form_dual_mode", clear_on_submit=True):
 if submit and simbol and ukuran > 0:
     multiplier = 1 if tipe == "BUY" else -1
     
-    # Perhitungan PnL berdasarkan instrumen mata uang broker
+    # Perhitungan PnL otomatis berdasarkan jenis broker dan aset
     if "USD" in broker.upper() or "FOREX" in broker.upper():
         pnl = (harga_keluar - harga_masuk) * ukuran * 100 * multiplier if "XAU" in simbol else (harga_keluar - harga_masuk) * ukuran * 100000 * multiplier
     else:
-        pnl = (harga_keluar - harga_masuk) * ukuran * multiplier
+        # Saham Indonesia: Mengalikan dengan jumlah lembar riil (1 Lot = 100 lembar)
+        pnl = (harga_keluar - harga_masuk) * (ukuran * 100) * multiplier
         
     status_aktif = "WIN" if pnl > 0 else "LOSS" if pnl < 0 else "BREAKEVEN"
     
-    # Sistem Audit Otomatisasi Terintegrasi
     if emosi_manual != "Disiplin Plan":
         audit_komparasi = f"⚠️ Emosi Terdeteksi: {emosi_manual}"
         deteksi_otomatis = "Impulsif Berisiko"
@@ -152,7 +162,6 @@ if submit and simbol and ukuran > 0:
         audit_komparasi = "✅ Sesuai Trading Plan"
         deteksi_otomatis = "Sesuai Aturan"
 
-    # Menyusun baris baru ke dalam DataFrame
     new_row = pd.DataFrame([{
         'Tanggal': str(tanggal),
         'Jam_Entry': str(jam_entry),
@@ -171,17 +180,20 @@ if submit and simbol and ukuran > 0:
         'Status': status_aktif
     }])
     
-    # Alur Penyimpanan Data Berdasarkan Sesi Akun
+    # Kunci langsung ke memori lokal aktif aplikasi
+    st.session_state.jurnal_data = pd.concat([st.session_state.jurnal_data, new_row], ignore_index=True)
+    df_active = st.session_state.jurnal_data
+    
+    # Kirim cadangan ke Google Sheets di background jika login sebagai Admin
     if st.session_state.user_role == "Admin":
-        df_gsheets = pd.concat([df_gsheets, new_row], ignore_index=True)
         try:
-            conn.update(spreadsheet=url_spreadsheet, data=df_gsheets)
+            url_spreadsheet = st.secrets["connections"]["gsheets"]["spreadsheet"]
+            conn = st.connection("gsheets", type=GSheetsConnection)
+            conn.update(spreadsheet=url_spreadsheet, data=st.session_state.jurnal_data)
             st.success("🔥 Data sukses disimpan permanen ke Google Sheets Pemilik!")
         except Exception as e:
-            st.error(f"Gagal sinkronisasi Google Sheets: {e}")
+            st.warning(f"⚠️ Data tersimpan di aplikasi, namun gagal sinkron ke cloud Google Sheets: {e}")
     else:
-        st.session_state.jurnal_guest = pd.concat([st.session_state.jurnal_guest, new_row], ignore_index=True)
-        df_active = st.session_state.jurnal_guest
         st.success("⚡ Data masuk ke Sandbox Tamu (Sesi Sementara)!")
         
     st.rerun()
@@ -189,17 +201,4 @@ if submit and simbol and ukuran > 0:
 # --- 📊 BAGIAN DASHBOARD GRAFIK KINERJA (EQUITY CURVE) ---
 st.header("📊 Analisis Performa & Grafik Modal")
 
-if not df_active.empty:
-    # Memastikan kolom Net PnL terbaca sebagai angka bersih
-    df_active['Net PnL'] = pd.to_numeric(df_active['Net PnL'], errors='coerce').fillna(0)
-    
-    # Kalkulasi kurva akumulasi profit
-    df_active['Kumulatif_Profit'] = df_active['Net PnL'].cumsum()
-    
-    # Menggambar grafik kurva pertumbuhan
-    st.line_chart(df_active, x='Tanggal', y='Kumulatif_Profit', use_container_width=True)
-    
-    # Menampilkan tabel ringkasan log riwayat
-    st.dataframe(df_active, use_container_width=True)
-else:
-    st.info("ℹ️ Belum ada data transaksi yang tersimpan. Grafik kurva pertumbuhan modal akan muncul di sini setelah Anda memasukkan data pertama.")
+if df_active is not None and not df_active.empty:
