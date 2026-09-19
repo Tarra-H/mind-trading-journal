@@ -199,7 +199,6 @@ if submit and simbol and ukuran > 0:
 # --- 📊 BAGIAN DASHBOARD GRAFIK KINERJA (EQUITY CURVE) ---
 st.header("📊 Analisis Performa & Grafik Modal")
 
-# VALIDASI PAKSA: Mengambil data terbaru langsung dari pusat memori aplikasi
 if st.session_state.user_role == "Admin":
     df_dashboard = st.session_state.jurnal_data
 else:
@@ -208,70 +207,144 @@ else:
 if df_dashboard is not None and not df_dashboard.empty:
     # Memastikan kolom Net PnL terbaca sebagai angka bersih
     df_dashboard['Net PnL'] = pd.to_numeric(df_dashboard['Net PnL'], errors='coerce').fillna(0)
-    df_dashboard['Kumulatif_Profit'] = df_dashboard['Net PnL'].cumsum()
+    
+    # -----------------------------------------------------------------
+    # 📅 FITUR EKSTRAKSI & FILTER PER BULAN & TAHUN
+    # -----------------------------------------------------------------
+    # Mengonversi kolom Tanggal ke format datetime untuk ekstraksi bulan/tahun
+    df_dashboard['Datetime_Obj'] = pd.to_datetime(df_dashboard['Tanggal'], errors='coerce')
+    
+    # Buat kolom label pengelompokan (Contoh: "2026 - September")
+    df_dashboard['Bulan_Tahun'] = df_dashboard['Datetime_Obj'].dt.strftime('%Y - %B')
+    # Mengisi baris kosong jika ada tanggal tidak valid
+    df_dashboard['Bulan_Tahun'] = df_dashboard['Bulan_Tahun'].fillna("Format Tanggal Salah")
+    
+    # Ambil daftar unik kelompok bulan & tahun untuk dijadikan pilihan drop-down
+    list_kelompok = ["Semua Data"] + sorted(list(df_dashboard['Bulan_Tahun'].unique()))
+    
+    st.markdown("### 📅 Filter Kategori Riwayat Waktu")
+    kategori_pilih = st.selectbox("Pilih Kelompok Bulan & Tahun yang Ingin Dilihat:", list_kelompok)
+    
+    # Menyaring data berdasarkan kategori yang dipilih pengguna
+    if kategori_pilih != "Semua Data":
+        df_filtered = df_dashboard[df_dashboard['Bulan_Tahun'] == kategori_pilih].copy()
+    else:
+        df_filtered = df_dashboard.copy()
+        
+    # Perhitungan ulang akumulasi profit khusus untuk data yang lolos filter
+    df_filtered['Kumulatif_Profit'] = df_filtered['Net PnL'].cumsum()
     
     # 1. Tampilkan Grafik Garis Pertumbuhan Modal
-    st.line_chart(df_dashboard, x='Tanggal', y='Kumulatif_Profit', use_container_width=True)
+    st.line_chart(df_filtered, x='Tanggal', y='Kumulatif_Profit', use_container_width=True)
     
     # 2. Tampilkan Grafik Audit Psikologi (Distribusi Kontrol Emosi)
     st.markdown("### 🧠 Audit Distribusi Kontrol Emosi & Psikologi")
     col_g1, col_g2 = st.columns(2)
     with col_g1:
         st.write("**Emosi Pilihan Manual Anda:**")
-        if 'Emosi_Pilihan_Manual' in df_dashboard.columns:
-            emosi_manual_counts = df_dashboard['Emosi_Pilihan_Manual'].value_counts()
-            st.bar_chart(emosi_manual_counts, use_container_width=True)
-        else:
-            st.info("Menunggu data emosi manual...")
+        emosi_manual_counts = df_filtered['Emosi_Pilihan_Manual'].value_counts()
+        st.bar_chart(emosi_manual_counts, use_container_width=True)
             
     with col_g2:
         st.write("**Hasil Analisis Deteksi Otomatis Sistem:**")
-        if 'Deteksi_Otomatis_Sistem' in df_dashboard.columns:
-            sistem_counts = df_dashboard['Deteksi_Otomatis_Sistem'].value_counts()
-            st.bar_chart(sistem_counts, use_container_width=True)
-        else:
-            st.info("Menunggu data audit sistem...")
+        sistem_counts = df_filtered['Deteksi_Otomatis_Sistem'].value_counts()
+        st.bar_chart(sistem_counts, use_container_width=True)
 
-    # 3. Tampilkan Tabel Log Data Riwayat Utama Lengkap dengan Kolom-Kolomnya
+    # -----------------------------------------------------------------
+    # 📝 TABEL RIWAYAT INTERAKTIF (EDIT SEPERTI EXCEL & HAPUS TOMBOL)
+    # -----------------------------------------------------------------
     st.markdown("### 📝 Log Riwayat Tabel Jurnal Transaksi")
-    st.dataframe(df_dashboard, use_container_width=True)
+    st.caption("💡 **Tips Premium:** Klik 2x pada kotak sel mana saja (Simbol, Lot, Harga) untuk mengedit typo langsung. Centang kotak kolom paling kanan lalu tekan tombol Hapus di bawah untuk mendelete baris.")
     
-    # --- 🛠️ FITUR BARU: KOREKSI & HAPUS DATA TRANSAKSI SAHAM ---
-    st.markdown("### 🔧 Panel Koreksi & Hapus Transaksi")
-    with st.expander("👉 Klik di sini untuk menghapus data transaksi yang salah input"):
-        st.warning("Pilih nomor indeks data (angka paling kiri pada tabel di atas) yang ingin Anda hapus secara permanen.")
-        
-        # Pilihan nomor baris berdasarkan data yang ada di tabel
-        opsi_indeks = list(df_dashboard.index)
-        indeks_dipilih = st.selectbox("Pilih Nomor Indeks Baris yang Akan Dihapus:", opsi_indeks)
-        
-        # Tampilkan cuplikan data yang akan dihapus agar trader tidak salah pilih
-        data_target = df_dashboard.loc[indeks_dipilih]
-        st.info(f"📋 **Data Terpilih:** Simbol: {data_target['Simbol']} | Tipe: {data_target['Tipe']} | PnL: Rp {data_target['Net PnL']:,.0f}")
-        
-        # Tombol konfirmasi hapus permanen
-        if st.button("🗑️ Hapus Baris Data Ini Secara Permanen", type="secondary", use_container_width=True):
-            if st.session_state.user_role == "Admin":
-                # Hapus baris data berdasarkan indeks terpilih
-                st.session_state.jurnal_data = st.session_state.jurnal_data.drop(indeks_dipilih).reset_index(drop=True)
-                # Perbarui file database CSV permanen di cloud
-                st.session_state.jurnal_data.to_csv(FILE_DB, index=False)
-                st.success(f"✅ Data indeks {indeks_dipilih} berhasil dihapus permanen dari Database!")
-            else:
-                st.session_state.jurnal_guest_db = st.session_state.jurnal_guest_db.drop(indeks_dipilih).reset_index(drop=True)
-                st.success(f"✅ Data indeks {indeks_dipilih} berhasil dihapus dari Sandbox Tamu!")
+    # Menyiapkan DataFrame untuk tampilan tabel interaktif
+    df_tampilan = df_filtered.copy()
+    
+    # Hapus kolom pembantu agar tidak mengotori tabel utama trader
+    if 'Datetime_Obj' in df_tampilan.columns: df_tampilan = df_tampilan.drop(columns=['Datetime_Obj'])
+    if 'Bulan_Tahun' in df_tampilan.columns: df_tampilan = df_tampilan.drop(columns=['Bulan_Tahun'])
+    if 'Kumulatif_Profit' in df_tampilan.columns: df_tampilan = df_tampilan.drop(columns=['Kumulatif_Profit'])
+    
+    # Mengubah penomoran awal indeks tabel agar dimulai dari Angka 1 (Bukan 0)
+    df_tampilan.index = range(1, len(df_tampilan) + 1)
+    
+    # Menambahkan kolom centang khusus untuk fitur hapus baris massal
+    df_tampilan["Pilih Hapus"] = False
+    
+    # Menampilkan tabel editor interaktif super canggih
+    edited_df = st.data_editor(
+        df_tampilan, 
+        use_container_width=True,
+        num_rows="dynamic"  # Mengaktifkan tombol pensil/tambah/hapus baris bawaan
+    )
+    
+    col_btn1, col_btn2 = st.columns(2)
+    
+    with col_btn1:
+        # TOMBOL 1: SIMPAN PERUBAHAN EDIT LANGSUNG (PENSIL KOREKSI)
+        if st.button("💾 Simpan Semua Koreksi / Perubahan Edit Sel", use_container_width=True, type="primary"):
+            # Mengembalikan indeks penomoran ke data dasar asli untuk kalkulasi mesin
+            df_save = edited_df.copy()
+            df_save = df_save.drop(columns=["Pilih Hapus"])
             
+            # Menghitung ulang Net PnL secara otomatis jika pengguna mengedit harga/ukuran
+            for idx in df_save.index:
+                m_type = 1 if df_save.loc[idx, 'Tipe'] == "BUY" else -1
+                h_masuk = float(df_save.loc[idx, 'Harga Masuk'])
+                h_keluar = float(df_save.loc[idx, 'Harga Keluar'])
+                vol = float(df_save.loc[idx, 'Ukuran'])
+                brk = str(df_save.loc[idx, 'Aset / Broker']).upper()
+                smb = str(df_save.loc[idx, 'Simbol']).upper()
+                
+                if "USD" in brk or "FOREX" in brk:
+                    res_pnl = (h_keluar - h_masuk) * vol * 100 * m_type if "XAU" in smb else (h_keluar - h_masuk) * vol * 100000 * m_type
+                else:
+                    res_pnl = (h_keluar - h_masuk) * (vol * 100) * m_type
+                
+                df_save.loc[idx, 'Net PnL'] = res_pnl
+                df_save.loc[idx, 'Status'] = "WIN" if res_pnl > 0 else "LOSS" if res_pnl < 0 else "BREAKEVEN"
+            
+            # Terapkan perubahan ke database utama
+            if st.session_state.user_role == "Admin":
+                st.session_state.jurnal_data = df_save.reset_index(drop=True)
+                st.session_state.jurnal_data.to_csv(FILE_DB, index=False)
+            else:
+                st.session_state.jurnal_guest_db = df_save.reset_index(drop=True)
+                
+            st.success("✅ Semua koreksi salah ketik berhasil diperbarui ke database!")
             st.rerun()
+            
+    with col_btn2:
+        # TOMBOL 2: HAPUS BARIS YANG DICENTANG PERMANEN
+        if st.button("🗑️ Hapus Semua Baris Transaksi yang Dicentang", use_container_width=True):
+            # Mencari baris mana saja yang diberi centang TRUE oleh pengguna
+            indeks_tercentang = edited_df[edited_df["Pilih Hapus"] == True].index
+            
+            if len(indeks_tercentang) > 0:
+                # Sesuaikan indeks tampilan (mulai dari 1) kembali ke indeks list Python asli (mulai dari 0)
+                indeks_asli_hapus = [i - 1 for i in indeks_tercentang]
+                
+                if st.session_state.user_role == "Admin":
+                    st.session_state.jurnal_data = st.session_state.jurnal_data.drop(indeks_asli_hapus).reset_index(drop=True)
+                    st.session_state.jurnal_data.to_csv(FILE_DB, index=False)
+                else:
+                    st.session_state.jurnal_guest_db = st.session_state.jurnal_guest_db.drop(indeks_asli_hapus).reset_index(drop=True)
+                    
+                st.success("🗑️ Baris transaksi terpilih berhasil dihapus!")
+                st.rerun()
+            else:
+                st.error("Silakan centang kolom 'Pilih Hapus' pada tabel di atas terlebih dahulu!")
 
+    # -----------------------------------------------------------------
+    # 📥 EKSPOR UNDUH DATABASE
+    # -----------------------------------------------------------------
     st.markdown("---")
-    # 4. Tombol Premium Unduh Ekspor File CSV Khusus Excel Indonesia
-    csv_excel = df_dashboard.to_csv(index=False, sep=";")
+    csv_excel = df_filtered.to_csv(index=False, sep=";")
     st.download_button(
-        label="📥 Ekspor Riwayat Jurnal ke Excel (.csv)",
+        label="📥 Ekspor Riwayat Kategori Waktu Ini ke Excel (.csv)",
         data=csv_excel,
-        file_name=f"Nata_Trading_Journal_{datetime.date.today()}.csv",
+        file_name=f"Nata_Jurnal_{kategori_pilih.replace(' ', '')}_{datetime.date.today()}.csv",
         mime="text/csv",
         use_container_width=True
     )
 else:
-    st.info("ℹ️ Belum ada data transaksi yang tersimpan. Grafik kurva pertumbuhan modal serta audit psikologi akan muncul di sini setelah Anda memasukkan data pertama.")
+    st.info("ℹ️ Belum ada data transaksi yang tersimpan. Grafik kurva pertumbuhan modal serta kategori bulanan akan muncul di sini setelah Anda memasukkan data pertama.")
