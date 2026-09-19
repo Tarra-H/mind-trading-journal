@@ -13,7 +13,7 @@ if 'user_role' not in st.session_state:
     st.session_state.user_role = None
 
 # Nama File Database Lokal Permanen di Server Streamlit Cloud
-FILE_DB = "database_jurnal.csv"
+FILE_DB = "database_jurnal_v2.csv"
 
 def login():
     st.title("🔒 Nata Mind Trading Journal - Gateway")
