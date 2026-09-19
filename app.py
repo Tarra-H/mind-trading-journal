@@ -199,19 +199,51 @@ if submit and simbol and ukuran > 0:
 # --- 📊 BAGIAN DASHBOARD GRAFIK KINERJA (EQUITY CURVE) ---
 st.header("📊 Analisis Performa & Grafik Modal")
 
-if df_active is not None and not df_active.empty:
-    df_active['Net PnL'] = pd.to_numeric(df_active['Net PnL'], errors='coerce').fillna(0)
-    df_active['Kumulatif_Profit'] = df_active['Net PnL'].cumsum()
+# VALIDASI PAKSA: Mengambil data terbaru langsung dari pusat memori aplikasi
+if st.session_state.user_role == "Admin":
+    df_dashboard = st.session_state.jurnal_data
+else:
+    df_dashboard = st.session_state.jurnal_guest_db
+
+if df_dashboard is not None and not df_dashboard.empty:
+    # Memastikan kolom Net PnL terbaca sebagai angka bersih
+    df_dashboard['Net PnL'] = pd.to_numeric(df_dashboard['Net PnL'], errors='coerce').fillna(0)
+    df_dashboard['Kumulatif_Profit'] = df_dashboard['Net PnL'].cumsum()
     
-    # 1. Grafik Kurva Akumulasi Pertumbuhan Modal
-    st.line_chart(df_active, x='Tanggal', y='Kumulatif_Profit', use_container_width=True)
+    # 1. Tampilkan Grafik Garis Pertumbuhan Modal
+    st.line_chart(df_dashboard, x='Tanggal', y='Kumulatif_Profit', use_container_width=True)
     
-    # 2. Grafik Audit Psikologi Terintegrasi (Distribusi Diagram Batang)
+    # 2. Tampilkan Grafik Audit Psikologi (Distribusi Kontrol Emosi)
     st.markdown("### 🧠 Audit Distribusi Kontrol Emosi & Psikologi")
     col_g1, col_g2 = st.columns(2)
     with col_g1:
         st.write("**Emosi Pilihan Manual Anda:**")
-        emosi_manual_counts = df_active['Emosi_Pilihan_Manual'].value_counts()
-        st.bar_chart(emosi_manual_counts, use_container_width=True)
+        if 'Emosi_Pilihan_Manual' in df_dashboard.columns:
+            emosi_manual_counts = df_dashboard['Emosi_Pilihan_Manual'].value_counts()
+            st.bar_chart(emosi_manual_counts, use_container_width=True)
+        else:
+            st.info("Menunggu data emosi manual...")
+            
     with col_g2:
         st.write("**Hasil Analisis Deteksi Otomatis Sistem:**")
+        if 'Deteksi_Otomatis_Sistem' in df_dashboard.columns:
+            sistem_counts = df_dashboard['Deteksi_Otomatis_Sistem'].value_counts()
+            st.bar_chart(sistem_counts, use_container_width=True)
+        else:
+            st.info("Menunggu data audit sistem...")
+
+    # 3. Tampilkan Tabel Log Data Riwayat Utama Lengkap dengan Kolom-Kolomnya
+    st.markdown("### 📝 Log Riwayat Tabel Jurnal Transaksi")
+    st.dataframe(df_dashboard, use_container_width=True)
+    
+    # 4. Tombol Premium Unduh Ekspor File CSV Khusus Excel Indonesia
+    csv_excel = df_dashboard.to_csv(index=False, sep=";")
+    st.download_button(
+        label="📥 Ekspor Riwayat Jurnal ke Excel (.csv)",
+        data=csv_excel,
+        file_name=f"Nata_Trading_Journal_{datetime.date.today()}.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
+else:
+    st.info("ℹ️ Belum ada data transaksi yang tersimpan. Grafik kurva pertumbuhan modal serta audit psikologi akan muncul di sini setelah Anda memasukkan data pertama.")
