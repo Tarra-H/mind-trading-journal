@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import datetime
-from streamlit_gsheets import GSheetsConnection
+import os
 
 # 1. KONFIGURASI HALAMAN UTAMA WEB
 st.set_page_config(page_title="🔒 Secure Private Journal", layout="wide", initial_sidebar_state="expanded")
@@ -12,8 +12,8 @@ if 'authenticated' not in st.session_state:
 if 'user_role' not in st.session_state:
     st.session_state.user_role = None
 
-if 'jurnal_data' not in st.session_state:
-    st.session_state.jurnal_data = None
+# Nama File Database Lokal Permanen di Server Streamlit Cloud
+FILE_DB = "database_jurnal.csv"
 
 def login():
     st.title("🔒 Nata Mind Trading Journal - Gateway")
@@ -53,35 +53,44 @@ if not st.session_state.authenticated:
     login()
     st.stop()
 
-# --- INSTANSIASI KONEKSI DATABASE PERMANEN ---
-if st.session_state.jurnal_data is None:
-    if st.session_state.user_role == "Admin":
+# --- SINKRONISASI BASIS DATA FILE CSV PERMANEN ---
+@st.cache_data(ttl="0d")
+def muat_database_permanen():
+    if os.path.exists(FILE_DB):
         try:
-            url_spreadsheet = st.secrets["connections"]["gsheets"]["spreadsheet"]
-            conn = st.connection("gsheets", type=GSheetsConnection)
-            df_load = conn.read(spreadsheet=url_spreadsheet, ttl="0d")
-            st.session_state.jurnal_data = df_load.dropna(how="all")
-        except Exception as e:
-            st.sidebar.error(f"⚠️ Hubungan Cloud Terputus, Memakai Basis Data Lokal: {e}")
-            st.session_state.jurnal_data = pd.DataFrame(columns=[
-                'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 
-                'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
-            ])
+            df = pd.read_csv(FILE_DB)
+            # Pastikan tipe data Tanggal seragam
+            df['Tanggal'] = df['Tanggal'].astype(str)
+            return df
+        except Exception:
+            pass
+    # Jika file belum ada, buat struktur tabel baru kosong
+    return pd.DataFrame(columns=[
+        'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 
+        'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
+    ])
+
+# Inisialisasi penyimpanan sesi aplikasi
+if 'jurnal_data' not in st.session_state or st.session_state.jurnal_data is None:
+    if st.session_state.user_role == "Admin":
+        st.session_state.jurnal_data = muat_database_permanen()
     else:
-        st.session_state.jurnal_data = pd.DataFrame(columns=[
+        st.session_state.jurnal_guest_db = pd.DataFrame(columns=[
             'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 
             'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
         ])
 
-df_active = st.session_state.jurnal_data
-
+# Penentuan alur tabel data aktif berdasarkan hak login
 if st.session_state.user_role == "Admin":
+    df_active = st.session_state.jurnal_data
     role_text = "🔑 AKUN PEMILIK (ADMIN)"
-    caption_text = "Status Keamanan: Akses Penuh. Data tersimpan otomatis di Google Drive GSheets Anda."
+    caption_text = "Status Keamanan: Akses Penuh Pemilik. Data tersimpan permanen di cloud server pribadi Anda."
 else:
+    df_active = st.session_state.jurnal_guest_db
     role_text = "👥 AKUN TAMU (GUEST MODE)"
     caption_text = "Status: Mode Sandbox Sampel. Anda bisa mencoba input, data akan terhapus jika browser di-refresh."
 
+# TOMBOL LOGOUT AMAN DI SIDEBAR KIRI
 st.sidebar.markdown(f"### Status Sesi:\n**{role_text}**")
 if st.sidebar.button("🔒 Log Out / Kunci Jurnal", type="primary", use_container_width=True):
     st.session_state.authenticated = False
@@ -143,11 +152,11 @@ if submit and simbol and ukuran > 0:
     if "USD" in broker.upper() or "FOREX" in broker.upper():
         pnl = (harga_keluar - harga_masuk) * ukuran * 100 * multiplier if "XAU" in simbol else (harga_keluar - harga_masuk) * ukuran * 100000 * multiplier
     else:
+        # Saham Indonesia (1 Lot = 100 Lembar)
         pnl = (harga_keluar - harga_masuk) * (ukuran * 100) * multiplier
         
     status_aktif = "WIN" if pnl > 0 else "LOSS" if pnl < 0 else "BREAKEVEN"
     
-    # Aturan AI Audit Emosi Pasar Otomatis
     if emosi_manual != "Disiplin Plan":
         audit_komparasi = f"⚠️ Emosi Terdeteksi: {emosi_manual}"
         deteksi_otomatis = "Impulsif Berisiko"
@@ -173,17 +182,17 @@ if submit and simbol and ukuran > 0:
         'Status': status_aktif
     }])
     
-    st.session_state.jurnal_data = pd.concat([st.session_state.jurnal_data, new_row], ignore_index=True)
-    df_active = st.session_state.jurnal_data
-    
     if st.session_state.user_role == "Admin":
-        try:
-            url_spreadsheet = st.secrets["connections"]["gsheets"]["spreadsheet"]
-            conn = st.connection("gsheets", type=GSheetsConnection)
-            conn.update(spreadsheet=url_spreadsheet, data=st.session_state.jurnal_data)
-            st.success("🔥 Data sukses disimpan permanen ke Google Sheets Pemilik!")
-        except Exception as e:
-            st.warning(f"⚠️ Data gagal masuk ke cloud: {e}")
+        # Gabungkan baris data baru ke database aktif pemilik
+        st.session_state.jurnal_data = pd.concat([st.session_state.jurnal_data, new_row], ignore_index=True)
+        # Amankan secara permanen ke file CSV penyimpanan awan
+        st.session_state.jurnal_data.to_csv(FILE_DB, index=False)
+        st.success("🔥 Data sukses disimpan permanen ke Database CSV Jurnal Pemilik!")
+        df_active = st.session_state.jurnal_data
+    else:
+        st.session_state.jurnal_guest_db = pd.concat([st.session_state.jurnal_guest_db, new_row], ignore_index=True)
+        df_active = st.session_state.jurnal_guest_db
+        st.success("⚡ Data masuk ke Sandbox Tamu (Sesi Sementara)!")
         
     st.rerun()
 
@@ -194,21 +203,15 @@ if df_active is not None and not df_active.empty:
     df_active['Net PnL'] = pd.to_numeric(df_active['Net PnL'], errors='coerce').fillna(0)
     df_active['Kumulatif_Profit'] = df_active['Net PnL'].cumsum()
     
+    # 1. Grafik Kurva Akumulasi Pertumbuhan Modal
     st.line_chart(df_active, x='Tanggal', y='Kumulatif_Profit', use_container_width=True)
     
-    # --- 🧠 DASHBOARD AUDIT PSIKOLOGI (GRAFIK EMOSI BARU) ---
-    st.markdown("### 🧠 Audit Distribusi Emosi Kontrol")
+    # 2. Grafik Audit Psikologi Terintegrasi (Distribusi Diagram Batang)
+    st.markdown("### 🧠 Audit Distribusi Kontrol Emosi & Psikologi")
     col_g1, col_g2 = st.columns(2)
     with col_g1:
         st.write("**Emosi Pilihan Manual Anda:**")
         emosi_manual_counts = df_active['Emosi_Pilihan_Manual'].value_counts()
         st.bar_chart(emosi_manual_counts, use_container_width=True)
     with col_g2:
-        st.write("**Hasil Deteksi Audit Otomatis Sistem:**")
-        sistem_counts = df_active['Deteksi_Otomatis_Sistem'].value_counts()
-        st.bar_chart(sistem_counts, use_container_width=True)
-
-    st.write("**Tabel Log Riwayat Lengkap:**")
-    st.dataframe(df_active, use_container_width=True)
-else:
-    st.info("ℹ️ Belum ada data transaksi yang tersimpan. Grafik kurva pertumbuhan modal akan muncul di sini setelah Anda memasukkan data pertama.")
+        st.write("**Hasil Analisis Deteksi Otomatis Sistem:**")
