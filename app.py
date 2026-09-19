@@ -12,7 +12,6 @@ if 'authenticated' not in st.session_state:
 if 'user_role' not in st.session_state:
     st.session_state.user_role = None
 
-# Inisialisasi penyimpanan lokal yang aman di memori aplikasi agar data tidak hilang saat rerun
 if 'jurnal_data' not in st.session_state:
     st.session_state.jurnal_data = None
 
@@ -42,17 +41,14 @@ def login():
 
     st.markdown("---")
     st.header("✨ Fitur Unggulan Nata Mind Trading Journal")
-    st.markdown("Sistem asisten pintar ini dirancang untuk mendeteksi kesehatan psikologi dan performa trading Anda secara otomatis:")
-    
     col_f1, col_f2, col_f3 = st.columns(3)
     with col_f1:
-        st.info("📈 **Kurva Akumulasi Profit**\n\nMemetakan grafik pertumbuhan modal (Equity Curve) secara real-time dari gabungan portofolio saham maupun forex Anda.")
+        st.info("📈 **Kurva Akumulasi Profit**\n\nMemetakan grafik pertumbuhan modal (Equity Curve) secara real-time.")
     with col_f2:
-        st.warning("🧠 **Audit Psikologi Otomatis**\n\nMendeteksi dan membandingkan emosi manual Anda dengan matematika pasar untuk menangkap gejala FOMO atau Revenge Trading.")
+        st.warning("🧠 **Audit Psikologi Otomatis**\n\nMendeteksi emosi manual vs matematika pasar.")
     with col_f3:
-        st.success("🛡️ **Manajemen Risiko Terunci**\n\nKalkulator Lot otomatis terintegrasi di dalam sistem berdasarkan batas toleransi kerugian modal Anda.")
+        st.success("🛡️ **Manajemen Risiko Terunci**\n\nKalkulator Lot otomatis terintegrasi.")
 
-# Jika belum login, stop aplikasi dan tampilkan halaman login
 if not st.session_state.authenticated:
     login()
     st.stop()
@@ -66,7 +62,7 @@ if st.session_state.jurnal_data is None:
             df_load = conn.read(spreadsheet=url_spreadsheet, ttl="0d")
             st.session_state.jurnal_data = df_load.dropna(how="all")
         except Exception as e:
-            st.sidebar.error(f"⚠️ Gagal load GSheets, memakai basis data lokal: {e}")
+            st.sidebar.error(f"⚠️ Hubungan Cloud Terputus, Memakai Basis Data Lokal: {e}")
             st.session_state.jurnal_data = pd.DataFrame(columns=[
                 'Tanggal', 'Jam_Entry', 'Aset / Broker', 'Simbol', 'Tipe', 'Harga Masuk', 'Harga Keluar', 
                 'Rencana_SL', 'Rencana_TP', 'Ukuran', 'Net PnL', 'Emosi_Pilihan_Manual', 'Deteksi_Otomatis_Sistem', 'Audit_Komparasi', 'Status'
@@ -86,7 +82,6 @@ else:
     role_text = "👥 AKUN TAMU (GUEST MODE)"
     caption_text = "Status: Mode Sandbox Sampel. Anda bisa mencoba input, data akan terhapus jika browser di-refresh."
 
-# TOMBOL LOGOUT AMAN DI SIDEBAR KIRI
 st.sidebar.markdown(f"### Status Sesi:\n**{role_text}**")
 if st.sidebar.button("🔒 Log Out / Kunci Jurnal", type="primary", use_container_width=True):
     st.session_state.authenticated = False
@@ -99,7 +94,7 @@ st.title("🧠 Nata Mind Trading Journal & Visual Audit")
 st.caption(caption_text)
 st.markdown("---")
 
-# SIDEBAR: MONEY MANAGEMENT & KALKULATOR LOT
+# SIDEBAR: MONEY MANAGEMENT
 st.sidebar.header("🛡️ Proteksi Risiko & Uang")
 modal_idr = st.sidebar.number_input("Modal Saham Aktif (IDR)", min_value=0.0, value=10000000.0, step=1000000.0)
 modal_usd = st.sidebar.number_input("Modal Forex Aktif (USD)", min_value=0.0, value=1000.0, step=100.0)
@@ -116,25 +111,24 @@ with st.form("form_dual_mode", clear_on_submit=True):
     col1, col2, col3 = st.columns(3)
     with col1:
         tanggal = st.date_input("Tanggal Transaksi", value=datetime.date.today())
-        jam_entry = st.time_input("Jam Masuk Posisi (Isi seadanya jika malas/ribet)", value=datetime.time(0, 0))
+        jam_entry = st.time_input("Jam Masuk Posisi", value=datetime.time(0, 0))
         pilihan_broker_standar = ["Stockbit IDR", "Ajaib IDR", "Gotrade USD", "Exness USD", "XM Forex USD", "Lainnya (Ketik Manual)..."]
         broker_pilih = st.selectbox("Platform / Broker", pilihan_broker_standar)
-        
         if broker_pilih == "Lainnya (Ketik Manual)...":
-            broker = st.text_input("Ketik Nama Broker Anda (Contoh: Indo Premier IDR, Binance USD)").strip()
+            broker = st.text_input("Ketik Nama Broker Anda").strip()
         else:
             broker = broker_pilih
             
     with col2:
-        simbol = st.text_input("Simbol / Kode Aset (Misal: BBRI / AAPL / XAUUSD)").upper()
+        simbol = st.text_input("Simbol / Kode Aset").upper()
         tipe = st.selectbox("Arah Posisi", ["BUY", "SELL"])
-        ukuran = st.number_input("Jumlah Ukuran (Lot / Lembar Saham)", min_value=0.0, step=1.0, format="%f", value=0.0)
+        ukuran = st.number_input("Jumlah Ukuran (Lot / Lembar)", min_value=0.0, step=1.0, format="%f", value=0.0)
         
     with col3:
-        harga_masuk = st.number_input("Harga Masuk (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
-        harga_keluar = st.number_input("Harga Keluar (Rata-rata)", min_value=0.0, step=1.0, format="%f", value=0.0)
-        r_sl = st.number_input("Rencana Stop Loss (Isi 0 jika tidak ada plan)", min_value=0.0, step=1.0, format="%f", value=0.0)
-        r_tp = st.number_input("Rencana Take Profit (Isi 0 jika tidak ada plan)", min_value=0.0, step=1.0, format="%f", value=0.0)
+        harga_masuk = st.number_input("Harga Masuk", min_value=0.0, step=1.0, format="%f", value=0.0)
+        harga_keluar = st.number_input("Harga Keluar", min_value=0.0, step=1.0, format="%f", value=0.0)
+        r_sl = st.number_input("Rencana Stop Loss", min_value=0.0, step=1.0, format="%f", value=0.0)
+        r_tp = st.number_input("Rencana Take Profit", min_value=0.0, step=1.0, format="%f", value=0.0)
         
     st.markdown("---")
     emosi_manual = st.selectbox("🧠 Apa strategi atau emosi yang Anda rasakan saat membuka posisi ini?", 
@@ -146,15 +140,14 @@ with st.form("form_dual_mode", clear_on_submit=True):
 if submit and simbol and ukuran > 0:
     multiplier = 1 if tipe == "BUY" else -1
     
-    # Perhitungan PnL otomatis berdasarkan jenis broker dan aset
     if "USD" in broker.upper() or "FOREX" in broker.upper():
         pnl = (harga_keluar - harga_masuk) * ukuran * 100 * multiplier if "XAU" in simbol else (harga_keluar - harga_masuk) * ukuran * 100000 * multiplier
     else:
-        # Saham Indonesia: Mengalikan dengan jumlah lembar riil (1 Lot = 100 lembar)
         pnl = (harga_keluar - harga_masuk) * (ukuran * 100) * multiplier
         
     status_aktif = "WIN" if pnl > 0 else "LOSS" if pnl < 0 else "BREAKEVEN"
     
+    # Aturan AI Audit Emosi Pasar Otomatis
     if emosi_manual != "Disiplin Plan":
         audit_komparasi = f"⚠️ Emosi Terdeteksi: {emosi_manual}"
         deteksi_otomatis = "Impulsif Berisiko"
@@ -180,11 +173,9 @@ if submit and simbol and ukuran > 0:
         'Status': status_aktif
     }])
     
-    # Kunci langsung ke memori lokal aktif aplikasi
     st.session_state.jurnal_data = pd.concat([st.session_state.jurnal_data, new_row], ignore_index=True)
     df_active = st.session_state.jurnal_data
     
-    # Kirim cadangan ke Google Sheets di background jika login sebagai Admin
     if st.session_state.user_role == "Admin":
         try:
             url_spreadsheet = st.secrets["connections"]["gsheets"]["spreadsheet"]
@@ -192,25 +183,32 @@ if submit and simbol and ukuran > 0:
             conn.update(spreadsheet=url_spreadsheet, data=st.session_state.jurnal_data)
             st.success("🔥 Data sukses disimpan permanen ke Google Sheets Pemilik!")
         except Exception as e:
-            st.warning(f"⚠️ Data tersimpan di aplikasi, namun gagal sinkron ke cloud Google Sheets: {e}")
-    else:
-        st.success("⚡ Data masuk ke Sandbox Tamu (Sesi Sementara)!")
+            st.warning(f"⚠️ Data gagal masuk ke cloud: {e}")
         
     st.rerun()
+
 # --- 📊 BAGIAN DASHBOARD GRAFIK KINERJA (EQUITY CURVE) ---
 st.header("📊 Analisis Performa & Grafik Modal")
 
 if df_active is not None and not df_active.empty:
-    # Memastikan kolom Net PnL terbaca sebagai angka bersih
     df_active['Net PnL'] = pd.to_numeric(df_active['Net PnL'], errors='coerce').fillna(0)
-    
-    # Kalkulasi kurva akumulasi profit
     df_active['Kumulatif_Profit'] = df_active['Net PnL'].cumsum()
     
-    # Tampilkan grafik garis performa portofolio
     st.line_chart(df_active, x='Tanggal', y='Kumulatif_Profit', use_container_width=True)
     
-    # Tampilkan ringkasan tabel data log riwayat di bawahnya
+    # --- 🧠 DASHBOARD AUDIT PSIKOLOGI (GRAFIK EMOSI BARU) ---
+    st.markdown("### 🧠 Audit Distribusi Emosi Kontrol")
+    col_g1, col_g2 = st.columns(2)
+    with col_g1:
+        st.write("**Emosi Pilihan Manual Anda:**")
+        emosi_manual_counts = df_active['Emosi_Pilihan_Manual'].value_counts()
+        st.bar_chart(emosi_manual_counts, use_container_width=True)
+    with col_g2:
+        st.write("**Hasil Deteksi Audit Otomatis Sistem:**")
+        sistem_counts = df_active['Deteksi_Otomatis_Sistem'].value_counts()
+        st.bar_chart(sistem_counts, use_container_width=True)
+
+    st.write("**Tabel Log Riwayat Lengkap:**")
     st.dataframe(df_active, use_container_width=True)
 else:
     st.info("ℹ️ Belum ada data transaksi yang tersimpan. Grafik kurva pertumbuhan modal akan muncul di sini setelah Anda memasukkan data pertama.")
