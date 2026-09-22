@@ -276,63 +276,80 @@ if df_dashboard is not None and not df_dashboard.empty:
         use_container_width=True,
         num_rows="dynamic"  # Mengaktifkan tombol pensil/tambah/hapus baris bawaan
     )
-    
+   
     col_btn1, col_btn2 = st.columns(2)
     
     with col_btn1:
-        # TOMBOL 1: SIMPAN PERUBAHAN EDIT LANGSUNG (PENSIL KOREKSI)
-        if st.button("💾 Simpan Semua Koreksi / Perubahan Edit Sel", use_container_width=True, type="primary"):
-            # Mengembalikan indeks penomoran ke data dasar asli untuk kalkulasi mesin
-            df_save = edited_df.copy()
-            df_save = df_save.drop(columns=["Pilih Hapus"])
-            
-            # Menghitung ulang Net PnL secara otomatis jika pengguna mengedit harga/ukuran
-            for idx in df_save.index:
-                m_type = 1 if df_save.loc[idx, 'Tipe'] == "BUY" else -1
-                h_masuk = float(df_save.loc[idx, 'Harga Masuk'])
-                h_keluar = float(df_save.loc[idx, 'Harga Keluar'])
-                vol = float(df_save.loc[idx, 'Ukuran'])
-                brk = str(df_save.loc[idx, 'Aset / Broker']).upper()
-                smb = str(df_save.loc[idx, 'Simbol']).upper()
-                
-                if "USD" in brk or "FOREX" in brk:
-                    res_pnl = (h_keluar - h_masuk) * vol * 100 * m_type if "XAU" in smb else (h_keluar - h_masuk) * vol * 100000 * m_type
-                else:
-                    res_pnl = (h_keluar - h_masuk) * (vol * 100) * m_type
-                
-                df_save.loc[idx, 'Net PnL'] = res_pnl
-                df_save.loc[idx, 'Status'] = "WIN" if res_pnl > 0 else "LOSS" if res_pnl < 0 else "BREAKEVEN"
-            
-            # Terapkan perubahan ke database utama
+        # 💾 TOMBOL SIMPAN KOREKSI BERDASARKAN ID PER BARIS (ANTI-TIMPA DATA BULAN LAIN)
+        if st.button("💾 Simpan Semua Perubahan Koreksi Sel", use_container_width=True, type="primary"):
             if st.session_state.user_role == "Admin":
-                st.session_state.jurnal_data = df_save.reset_index(drop=True)
-                st.session_state.jurnal_data.to_csv(FILE_DB, index=False)
-            else:
-                st.session_state.jurnal_guest_db = df_save.reset_index(drop=True)
+                for idx in edited_df.index:
+                    db_id = edited_df.loc[idx, 'id']
+                    m_type = 1 if edited_df.loc[idx, 'Tipe'] == "BUY" else -1
+                    h_masuk = float(edited_df.loc[idx, 'Harga_Masuk'])
+                    h_keluar = float(edited_df.loc[idx, 'Harga_Keluar'])
+                    vol = float(edited_df.loc[idx, 'Ukuran'])
+                    brk = str(edited_df.loc[idx, 'Aset_Broker']).upper()
+                    smb = str(edited_df.loc[idx, 'Simbol']).upper()
+                    ems_manual = str(edited_df.loc[idx, 'Emosi_Pilihan_Manual'])
+                    tgl_koreksi = str(edited_df.loc[idx, 'Tanggal'])
+                    
+                    if "USD" in brk or "FOREX" in brk:
+                        res_pnl = (h_keluar - h_masuk) * vol * 100 * m_type if "XAU" in smb else (h_keluar - h_masuk) * vol * 100000 * m_type
+                    else:
+                        res_pnl = (h_keluar - h_masuk) * (vol * 100) * m_type
+                    
+                    status_koreksi = "WIN" if res_pnl > 0 else "LOSS" if res_pnl < 0 else "BREAKEVEN"
+                    audit_komparasi = f"⚠️ Emosi Terdeteksi: {ems_manual}" if ems_manual != "Disiplin Plan" else "✅ Sesuai Trading Plan"
+                    deteksi_otomatis = "Impulsif Berisiko" if ems_manual != "Disiplin Plan" else "Sesuai Aturan"
+                    
+                    update_payload = {
+                        'Tanggal': tgl_koreksi,
+                        'Jam_Entry': str(edited_df.loc[idx, 'Jam_Entry']),
+                        'Aset_Broker': str(edited_df.loc[idx, 'Aset_Broker']),
+                        'Simbol': smb,
+                        'Tipe': str(edited_df.loc[idx, 'Tipe']),
+                        'Harga_Masuk': str(h_masuk),
+                        'Harga_Keluar': str(h_keluar),
+                        'Ukuran': str(vol),
+                        'Net_PnL': str(res_pnl),
+                        'Status': status_koreksi,
+                        'Emosi_Pilihan_Manual': ems_manual,
+                        'Deteksi_Otomatis_Sistem': deteksi_otomatis,
+                        'Audit_Komparasi': audit_komparasi
+                    }
+                    
+                    url_patch = f"{SUPABASE_URL}/rest/v1/jurnal?id=eq.{db_id}"
+                    requests.patch(url_patch, headers=headers, json=update_payload)
                 
-            st.success("✅ Semua koreksi salah ketik berhasil diperbarui ke database!")
+                # Paksa ambil ulang data segar dari server database Supabase Cloud
+                st.session_state.jurnal_data = muat_data_supabase()
+            else:
+                st.session_state.guest_db = edited_df.drop(columns=["Pilih Hapus"]).reset_index(drop=True)
+                
+            st.success("✅ Koreksi sel database berhasil disinkronkan aman ke Supabase Cloud!")
+            st.cache_data.clear()
             st.rerun()
             
     with col_btn2:
-        # TOMBOL 2: HAPUS BARIS YANG DICENTANG PERMANEN
+        # 🗑️ TOMBOL HAPUS BARIS YANG DICENTANG PERMANEN BERDASARKAN ID SUPABASE
         if st.button("🗑️ Hapus Semua Baris Transaksi yang Dicentang", use_container_width=True):
-            # Mencari baris mana saja yang diberi centang TRUE oleh pengguna
             indeks_tercentang = edited_df[edited_df["Pilih Hapus"] == True].index
-            
             if len(indeks_tercentang) > 0:
-                # Sesuaikan indeks tampilan (mulai dari 1) kembali ke indeks list Python asli (mulai dari 0)
-                indeks_asli_hapus = [i - 1 for i in indeks_tercentang]
-                
                 if st.session_state.user_role == "Admin":
-                    st.session_state.jurnal_data = st.session_state.jurnal_data.drop(indeks_asli_hapus).reset_index(drop=True)
-                    st.session_state.jurnal_data.to_csv(FILE_DB, index=False)
+                    for idx in indeks_tercentang:
+                        db_id = edited_df.loc[idx, 'id']
+                        url_del = f"{SUPABASE_URL}/rest/v1/jurnal?id=eq.{db_id}"
+                        requests.delete(url_del, headers=headers)
+                    st.session_state.jurnal_data = muat_data_supabase()
                 else:
-                    st.session_state.jurnal_guest_db = st.session_state.jurnal_guest_db.drop(indeks_asli_hapus).reset_index(drop=True)
-                    
-                st.success("🗑️ Baris transaksi terpilih berhasil dihapus!")
+                    indeks_asli_hapus = [i - 1 for i in indeks_tercentang]
+                    st.session_state.guest_db = st.session_state.guest_db.drop(indeks_asli_hapus).reset_index(drop=True)
+                st.success("🗑️ Baris transaksi terpilih berhasil dihapus dari Cloud!")
+                st.cache_data.clear()
                 st.rerun()
             else:
-                st.error("Silakan centang kolom 'Pilih Hapus' pada tabel di atas terlebih dahulu!")
+                st.error("Silakan centang kolom 'Pilih Hapus' pada tabel terlebih dahulu!")
 
     # -----------------------------------------------------------------
     # 📥 EKSPOR UNDUH DATABASE
@@ -342,7 +359,7 @@ if df_dashboard is not None and not df_dashboard.empty:
     st.download_button(
         label="📥 Ekspor Riwayat Kategori Waktu Ini ke Excel (.csv)",
         data=csv_excel,
-        file_name=f"Nata_Jurnal_{kategori_pilih.replace(' ', '')}_{datetime.date.today()}.csv",
+        file_name=f"Nata_Jurnal_{datetime.date.today()}.csv",
         mime="text/csv",
         use_container_width=True
     )
